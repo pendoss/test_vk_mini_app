@@ -6,18 +6,18 @@ import { Button } from '@/shared/ui/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/ui/avatar';
 import { Badge } from '@/shared/ui/ui/badge';
 import { Trophy, Calendar, Users, Target, Coins, ClipboardList, Bell } from 'lucide-react';
-import { TasksPage } from '@/pages/tasks/ui/TasksPage';
-import { ProfilePage } from '@/pages/profile/ui/ProfilePage';
-import { LeaderboardPage } from '@/pages/leaderboard/ui/LeaderboardPage';
-import { CalendarPage } from '@/pages/calendar/ui/CalendarPage';
-import { WorkoutPlannerPage } from '@/pages/workout-planner/ui/WorkoutPlannerPage';
-import { FriendsPage } from '@/pages/friends/ui/FriendsPage';
+import { TasksPage } from '@/pages/tasks';
+import { ProfilePage } from '@/pages/profile';
+import { LeaderboardPage } from '@/pages/leaderboard';
+import { CalendarPage } from '@/pages/calendar';
+import { WorkoutPlannerPage } from '@/pages/workout-planner';
+import { FriendsPage } from '@/pages/friends';
 import { VKUIWrapper } from '@/shared/ui/VKUIWrapper';
 import { motion, AnimatePresence } from 'framer-motion';
 
-import { Persik, Home } from './panels';
-import { DEFAULT_VIEW_PANELS } from './routes';
-import './styles/globals.css';
+import { Persik, Home } from '../panels';
+import { DEFAULT_VIEW_PANELS } from '../routes';
+import '../styles/globals.css';
 
 interface User {
   id: string;
