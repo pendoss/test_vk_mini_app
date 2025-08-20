@@ -1,10 +1,7 @@
-export { 
-  TasksApiService,
-  tasksApi
-} from './api';
+export {
+  taskApi
+} from './api/index.ts';
 
 export type { 
-  Task, 
-  UserActivity, 
-  TaskCompletion
-} from './api';
+  Task,
+} from './model/types.ts';

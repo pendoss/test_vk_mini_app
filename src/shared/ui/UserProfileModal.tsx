@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { MapPin, Trophy, Users, UserPlus, Calendar, Clock } from 'lucide-react';
+import { MapPin, Trophy, UserPlus, Calendar } from 'lucide-react';
 
 interface User {
   id: string;
@@ -16,7 +16,7 @@ interface User {
   city?: string;
 }
 
-interface UserProfileData extends User {
+ export interface UserProfileData extends User {
   rank?: number;
   trainingDays: number;
   achievements: string[];

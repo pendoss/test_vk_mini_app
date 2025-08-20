@@ -1,122 +1,133 @@
-import { makeAutoObservable, runInAction } from 'mobx';
-import { User, UserProfile, LeaderboardEntry, Friend, FriendRequest, SearchResult, HomeData } from '../api';
-import { userApi } from '../api';
-import { getApiErrorMessage } from '@/shared/api';
+import {makeAutoObservable, runInAction} from 'mobx';
+import {userApi} from '../api';
+import {User} from "@/entities/user";
+import bridge, {UserInfo} from "@vkontakte/vk-bridge";
+import {taskStore} from "@/features/tasks/model/store.ts";
+
+function mapVkUserToApplication(userInfo: UserInfo): User {
+    return {
+        id: userInfo.id.toString(),
+        name: userInfo.first_name + " " + userInfo.last_name,
+        firstName: userInfo.first_name,
+        lastName: userInfo.last_name,
+        level: 0,
+        avatar: userInfo.photo_200,
+        city: userInfo.city?.title ?? "",
+        birthDate: userInfo.bdate,
+        sex: userInfo.sex,
+        status: "online",
+        workoutsCompleted: 0,
+        workoutsPlaned: 0,
+        workoutsWithFriends: 0,
+        totalWorkouts: 0,
+        friendAdded: 0,
+        weight: 0,
+        primaryGym: "",
+        records: [""],
+        points: 0,
+    };
+
+}
 
 class UserStore {
-  user: User | null = null;
-  profile: UserProfile | null = null;
-  homeData: HomeData | null = null;
-  isLoading = false;
-  error: string | null = null;
-  friends: Friend[] = [];
-  friendRequests: FriendRequest[] = [];
-  leaderboard: LeaderboardEntry[] = [];
-  searchResults: SearchResult[] = [];
-  
-  // Loading states для разных операций
-  loadingStates = {
-    user: false,
-    profile: false,
-    friends: false,
-    requests: false,
-    leaderboard: false,
-    search: false,
-    home: false,
-  };
+    user: User | null = null;
+    isLoading = false;
+    error: string | null = null;
+    loadingStates = {
+        user: false,
+        profile: false,
+        friends: false,
+        requests: false,
+        leaderboard: false,
+        search: false,
+        home: false,
+    };
 
-  constructor() {
-    makeAutoObservable(this);
-    this.initializeUser();
-  }
-
-  // Инициализация пользователя при запуске приложения
-  async initializeUser() {
-    try {
-      await this.fetchCurrentUser();
-      await this.fetchHomeData();
-    } catch (error) {
-      console.error('Failed to initialize user:', error);
+    constructor() {
+        makeAutoObservable(this);
+        this.initializeUser();
     }
-  }
 
-  // Получить текущего пользователя
-  async fetchCurrentUser() {
-    runInAction(() => {
-      this.loadingStates.user = true;
-      this.error = null;
-    });
-
-    try {
-      const user = await userApi.getCurrentUser();
-      runInAction(() => {
-        this.user = user;
-        this.loadingStates.user = false;
-      });
-      return user;
-    } catch (error) {
-      runInAction(() => {
-        this.error = getApiErrorMessage(error);
-        this.loadingStates.user = false;
-      });
-      throw error;
+    // Инициализация пользователя при запуске приложения
+    async initializeUser() {
+        try {
+            await this.fetchCurrentUser();
+        } catch (error) {
+            console.error('Failed to initialize user:', error);
+        }
     }
-  }
 
-  // Получить данные для главной страницы
-  async fetchHomeData() {
-    runInAction(() => {
-      this.loadingStates.home = true;
-      this.error = null;
-    });
 
-    try {
-      const homeData = await userApi.getHomeData();
-      runInAction(() => {
-        this.homeData = homeData;
-        this.loadingStates.home = false;
-      });
-      return homeData;
-    } catch (error) {
-      runInAction(() => {
-        this.error = getApiErrorMessage(error);
-        this.loadingStates.home = false;
-      });
-      throw error;
+    // Получить текущего пользователя VK и сохранить в стор
+    async fetchCurrentUser() {
+        this.isLoading = true;
+        this.error = null;
+        const userInfo = await bridge.send('VKWebAppGetUserInfo');
+        const existingRecord = await userApi.getUser(userInfo.id.toString());
+        if (existingRecord) {// TODO: подумать правильный ли пользователь у меня загружается
+            this.setUser(existingRecord);
+        } else {
+            const user = await userApi.createUser(mapVkUserToApplication(userInfo));
+            this.setUser(user);
+        }
     }
-  }
 
-  // Очистить ошибки
-  clearError() {
-    runInAction(() => {
-      this.error = null;
-    });
-  }
+    // Получить данные для главной страницы
+    // Очистить ошибки
+    clearError() {
+        runInAction(() => {
+            this.error = null;
+        });
+    }
 
-  // Геттеры для удобства
-  get isLoadingAny() {
-    return Object.values(this.loadingStates).some(loading => loading);
-  }
+    async updateUserStats(
+        field: keyof Pick<User, 'workoutsCompleted' | 'workoutsPlaned' | 'workoutsWithFriends' | 'totalWorkouts' | 'friendAdded'>,
+        increment: number = 1
+    ): Promise<void> {
+        runInAction(() => {
+            if (this.user) {
+                this.user[field] = (this.user[field] ?? 0) + increment;
+            }
+        });
+        if (this.user) {
+            await taskStore.checkAndUpdateTasksAfterUserAction();
+            await userApi.updateUser(this.user.id, { [field]: this.user[field] });
+        }
+    }
 
-  get currentUser() {
-    return this.user;
-  }
+    // Геттеры для удобства
+    get isLoadingAny() {
+        return Object.values(this.loadingStates).some(loading => loading);
+    }
 
-  get userLevel() {
-    return this.homeData?.user?.level || this.user?.level || 1;
-  }
+    // get userPoints() {
+    //   return this.homeData?.user?.points || this.user?.points || 0;
+    // }
 
-  get userPoints() {
-    return this.homeData?.user?.points || this.user?.points || 0;
-  }
 
-  get userName() {
-    return this.user?.name || 
-           (this.user?.firstName && this.user?.lastName 
-             ? `${this.user.firstName} ${this.user.lastName}` 
-             : this.user?.firstName) || 
-           'Пользователь';
-  }
+
+    get userName() {
+        return this.user?.name ||
+            (this.user?.firstName && this.user?.lastName
+                ? `${this.user.firstName} ${this.user.lastName}`
+                : this.user?.firstName) ||
+            'Пользователь';
+    }
+
+    setUser(user: User) {
+        runInAction(() => {
+            this.user = user;
+        });
+    }
+
+    async getUserById(id: string): Promise<User | null> {
+        try {
+            return await userApi.getUser(id);
+        } catch {
+            return null;
+        }
+    }
 }
+
 
 export const userStore = new UserStore();

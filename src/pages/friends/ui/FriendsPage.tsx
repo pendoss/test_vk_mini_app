@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/ui/card';
+import { Card, CardContent } from '@/shared/ui/ui/card';
 import { Badge } from '@/shared/ui/ui/badge';
 import { Button } from '@/shared/ui/ui/button';
 import { Input } from '@/shared/ui/ui/input';
 import { Avatar, AvatarFallback } from '@/shared/ui/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/ui/dialog';
 import { Label } from '@/shared/ui/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/ui/tabs';
-import { Users, Search, Plus, UserPlus, MessageCircle, Calendar, Trophy, MapPin, X, Check } from 'lucide-react';
+import { Users, Search, Plus, UserPlus, MessageCircle, Calendar, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserProfileModal } from '@/shared/ui/UserProfileModal';
+import {UserProfileData, UserProfileModal} from '@/shared/ui/UserProfileModal';
 
 interface Friend {
   id: string;
@@ -47,7 +46,7 @@ interface SearchResult {
 }
 
 export function FriendsPage() {
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
   const [friends, setFriends] = useState<Friend[]>([
@@ -309,7 +308,7 @@ export function FriendsPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="w-full">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "friends" | "requests" | "search")} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="friends">
             Друзья ({friends.length})

@@ -10,19 +10,8 @@ import { Label } from '@/shared/ui/ui/label';
 import { Textarea } from '@/shared/ui/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/ui/select';
 import { Calendar, MapPin, Trophy, Users, Plus } from 'lucide-react';
+import {User} from "@/entities/user";
 
-interface User {
-  id: string;
-  name: string;
-  points: number;
-  level: number;
-  avatar?: string;
-  firstName?: string;
-  lastName?: string;
-  city?: string;
-  birthDate?: string | null;
-  sex?: 0 | 1 | 2;
-}
 
 interface UserProfile {
   fullName: string;
@@ -53,7 +42,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
   // Функция для форматирования даты рождения из VK API
   const formatBirthDate = (bdate: string | null): string => {
     if (!bdate) return 'Не указана';
-    
+
     // VK может возвращать формат DD.MM.YYYY или DD.MM
     const parts = bdate.split('.');
     if (parts.length === 3) {
@@ -63,16 +52,16 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
       // Только день и месяц DD.MM
       return `${parts[0]}.${parts[1]}`;
     }
-    
+
     return bdate;
   };
 
   const [profile, setProfile] = useState<UserProfile>({
     fullName: currentUser.name,
     birthDate: currentUser.birthDate || null,
-    weight: 85,
-    city: currentUser.city || 'Москва',
-    primaryGym: 'FitnessPark Сокольники',
+    weight: currentUser.weight,
+    city: currentUser.city || "не указан",
+    primaryGym: currentUser.primaryGym || "не указан",
     records: {
       'Жим лежа': 120,
       'Становая тяга': 180,
@@ -198,7 +187,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
             </div>
             <div>
               <p className="text-muted-foreground">Баллы</p>
-              <p>{currentUser.points}</p>
+              {/*<p>{currentUser.points}</p>*/}
             </div>
           </div>
         </CardContent>
@@ -249,7 +238,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
                 <DialogHeader>
                   <DialogTitle>Новая тренировка</DialogTitle>
                 </DialogHeader>
-                
+
                 <Tabs defaultValue="details" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="details">Основное</TabsTrigger>
@@ -266,7 +255,7 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
                         placeholder="Например: День ног"
                       />
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="description">Описание</Label>
                       <Textarea
@@ -310,8 +299,8 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
 
                     <div>
                       <Label htmlFor="afterWorkout">После тренировки</Label>
-                      <Select 
-                        value={newWorkout.afterWorkout} 
+                      <Select
+                        value={newWorkout.afterWorkout}
                         onValueChange={(value) => setNewWorkout({ ...newWorkout, afterWorkout: value })}
                       >
                         <SelectTrigger>

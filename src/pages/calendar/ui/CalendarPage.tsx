@@ -1,4 +1,6 @@
+import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
+import { workoutStore } from '@/entities/workout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/ui/card';
 import { Badge } from '@/shared/ui/ui/badge';
 import { Button } from '@/shared/ui/ui/button';
@@ -7,45 +9,27 @@ import { Input } from '@/shared/ui/ui/input';
 import { Label } from '@/shared/ui/ui/label';
 import { Textarea } from '@/shared/ui/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/ui/select';
-import { ChevronLeft, ChevronRight, Calendar, MapPin, Clock, Users, Plus, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-
-interface WorkoutPlan {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  estimatedDuration: number;
-  friends: string[];
-  afterWorkout: string;
-  status: 'planned' | 'completed' | 'cancelled';
-  createdAt: string;
-  createdBy: string;
-}
-
-interface User {
-  id: string;
-  name: string;
-  points: number;
-  level: number;
-}
+import { ChevronLeft, ChevronRight, Calendar, MapPin, Clock, Users } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { User, userStore } from '@/entities/user';
+import { WorkoutPlan } from '@/entities/workout/model/types';
 
 interface CalendarPageProps {
-  workouts: WorkoutPlan[];
   currentUser: User;
-  onAddWorkout: (workout: Omit<WorkoutPlan, 'id' | 'createdAt' | 'createdBy'>) => Promise<WorkoutPlan>;
-  onUpdateWorkout: (workoutId: string, updates: Partial<WorkoutPlan>) => Promise<void>;
-  onDeleteWorkout: (workoutId: string) => Promise<void>;
 }
 
-export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWorkout, onDeleteWorkout }: CalendarPageProps) {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 0, 18)); // January 18, 2025
+const monthNames = [
+  'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+  'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+];
+
+const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<WorkoutPlan | null>(null);
   const [isCreatingWorkout, setIsCreatingWorkout] = useState(false);
-  const [quickCreateDate, setQuickCreateDate] = useState<string>('');
   
   const [newWorkout, setNewWorkout] = useState<Partial<WorkoutPlan>>({
     title: '',
@@ -54,17 +38,12 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
     time: '',
     location: 'FitnessPark Сокольники',
     estimatedDuration: 60,
-    friends: [],
+    participants: [],
     afterWorkout: 'Бегу домой',
     status: 'planned'
   });
 
-  const monthNames = [
-    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-  ];
-
-  const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+  const workouts = workoutStore.workouts;
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -88,148 +67,30 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
     );
   };
 
+  // Split workouts for each day
   const getWorkoutsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return workouts.filter(event => event.date === dateStr);
-  };
-
-  const getDateStatus = (day: number) => {
-    const dayWorkouts = getWorkoutsForDate(day);
-    if (dayWorkouts.length === 0) return null;
-    
-    if (dayWorkouts.some(w => w.status === 'planned')) return 'planned';
-    if (dayWorkouts.some(w => w.status === 'completed')) return 'completed';
-    if (dayWorkouts.some(w => w.status === 'cancelled')) return 'cancelled';
-    return null;
-  };
-
-  const handleDateClick = (day: number) => {
-    const clickedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const dayWorkouts = getWorkoutsForDate(day);
-    
-    if (dayWorkouts.length === 0) {
-      // No workouts - show quick create option
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      setQuickCreateDate(dateStr);
-      setNewWorkout({
-        ...newWorkout,
-        date: dateStr,
-        time: '18:00'
-      });
-      setIsCreatingWorkout(true);
-    } else {
-      // Has workouts - show day details
-      setSelectedDate(clickedDate);
-    }
-  };
-
-  const createWorkout = () => {
-    if (!newWorkout.title || !newWorkout.date || !newWorkout.time) return;
-
-    onAddWorkout({
-      title: newWorkout.title!,
-      description: newWorkout.description || '',
-      date: newWorkout.date!,
-      time: newWorkout.time!,
-      location: newWorkout.location!,
-      estimatedDuration: newWorkout.estimatedDuration || 60,
-      friends: newWorkout.friends || [],
-      afterWorkout: newWorkout.afterWorkout || 'Бегу домой',
-      status: 'planned'
-    });
-
-    setNewWorkout({
-      title: '',
-      description: '',
-      date: '',
-      time: '',
-      location: 'FitnessPark Сокольники',
-      estimatedDuration: 60,
-      friends: [],
-      afterWorkout: 'Бегу домой',
-      status: 'planned'
-    });
-    setIsCreatingWorkout(false);
-    setQuickCreateDate('');
-  };
-
-  const addWorkoutToDate = (dateStr: string) => {
-    setNewWorkout({
-      ...newWorkout,
-      date: dateStr,
-      time: '18:00'
-    });
-    setIsCreatingWorkout(true);
-    setSelectedDate(null);
-  };
-
-  const renderCalendarDays = () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const days = [];
-
-    // Empty cells for days before the first day of the month
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2"></div>);
-    }
-
-    // Days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const status = getDateStatus(day);
-      const workoutsCount = getWorkoutsForDate(day).length;
-      const todayClass = isToday(day) ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : '';
-      const statusClass = status ? {
-        'planned': 'bg-blue-100 text-blue-900 border border-blue-300',
-        'completed': 'bg-green-100 text-green-900 border border-green-300',
-        'cancelled': 'bg-red-100 text-red-900 border border-red-300'
-      }[status] : 'hover:bg-muted';
-
-      days.push(
-        <div
-          key={day}
-          onClick={() => handleDateClick(day)}
-          className={`
-            p-2 h-12 flex flex-col items-center justify-center rounded-lg cursor-pointer transition-all text-sm relative
-            ${todayClass || statusClass}
-          `}
-        >
-          <span>{day}</span>
-          {workoutsCount > 0 && (
-            <div className="absolute bottom-0.5 right-0.5">
-              <div className="w-2 h-2 bg-current rounded-full opacity-60"></div>
-              {workoutsCount > 1 && (
-                <div className="absolute -top-0.5 -left-0.5 w-1.5 h-1.5 bg-current rounded-full"></div>
-              )}
-            </div>
-          )}
-        </div>
+    const dayWorkouts = workouts.filter(event => {
+      // Robust date comparison: parse both sides to Date objects and compare only the date part
+      const eventDate = new Date(event.date);
+      const compareDate = new Date(dateStr);
+      return (
+        eventDate.getFullYear() === compareDate.getFullYear() &&
+        eventDate.getMonth() === compareDate.getMonth() &&
+        eventDate.getDate() === compareDate.getDate()
       );
-    }
-
-    return days;
+    });
+    return {
+      my: dayWorkouts.filter(w => w.creator_id === currentUser.id),
+      others: dayWorkouts.filter(w => w.creator_id !== currentUser.id)
+    };
   };
 
-  const getTypeColor = (status: WorkoutPlan['status']) => {
-    switch (status) {
-      case 'planned': return 'bg-blue-500';
-      case 'completed': return 'bg-green-500';
-      case 'cancelled': return 'bg-red-500';
-    }
-  };
-
-  const getTypeLabel = (status: WorkoutPlan['status']) => {
-    switch (status) {
-      case 'planned': return 'Запланировано';
-      case 'completed': return 'Выполнено';
-      case 'cancelled': return 'Отменено';
-    }
-  };
-
-  const selectedDateWorkouts = selectedDate ? getWorkoutsForDate(selectedDate.getDate()) : [];
+  const selectedDateWorkouts = selectedDate ? getWorkoutsForDate(selectedDate.getDate()) : { my: [], others: [] };
   const upcomingWorkouts = workouts
     .filter(w => w.status === 'planned' && new Date(w.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 3);
+    .slice(0, 5);
 
   // Simple markdown renderer for basic formatting
   const renderMarkdown = (markdown: string) => {
@@ -241,6 +102,99 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br />');
+  };
+
+  const renderCalendarDays = () => {
+    const daysInMonth = getDaysInMonth(currentDate);
+    const firstDay = getFirstDayOfMonth(currentDate);
+    const days = [];
+
+    for (let i = 0; i < firstDay; i++) {
+      days.push(<div key={`empty-${i}`} className="p-2"></div>);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const { my, others } = getWorkoutsForDate(day);
+      const hasWorkouts = my.length > 0 || others.length > 0;
+      const todayClass = isToday(day) ? 'bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2' : '';
+      const workoutClass = hasWorkouts ? 'bg-blue-50 ring-2 ring-blue-300' : '';
+      days.push(
+        <div
+          key={day}
+          onClick={() => handleDateClick(day)}
+          className={`p-2 h-12 flex flex-col items-center justify-center rounded-lg cursor-pointer transition-all text-sm relative ${todayClass} ${workoutClass}`}
+        >
+          <span>{day}</span>
+          {my.length > 0 && (
+            <div className="absolute bottom-0.5 left-0.5">
+              <div className="w-2 h-2 bg-blue-500 rounded-full opacity-80"></div>
+            </div>
+          )}
+          {others.length > 0 && (
+            <div className="absolute bottom-0.5 right-0.5">
+              <div className="w-2 h-2 bg-orange-400 rounded-full opacity-80"></div>
+            </div>
+          )}
+        </div>
+      );
+    }
+    return days;
+  };
+
+  const handleDateClick = (day: number) => {
+    setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+  };
+
+  const getTypeColor = (status: string) => {
+    switch (status) {
+      case 'planned': return 'bg-blue-100 text-blue-800 border border-blue-300';
+      case 'completed': return 'bg-green-100 text-green-800 border border-green-300';
+      case 'cancelled': return 'bg-red-100 text-red-800 border border-red-300';
+      default: return 'bg-muted text-muted-foreground border';
+    }
+  };
+
+  const getTypeLabel = (status: string) => {
+    switch (status) {
+      case 'planned': return 'Запланировано';
+      case 'completed': return 'Выполнено';
+      case 'cancelled': return 'Отменено';
+      default: return 'Неизвестно';
+    }
+  };
+
+  const createWorkout = async () => {
+    if (!newWorkout.title || !newWorkout.date || !newWorkout.time) return;
+    await workoutStore.createWorkout({
+      ...newWorkout,
+      creator_id: currentUser.id,
+      participants: [],
+      status: 'planned',
+      id: Math.random().toString(36),
+      time: newWorkout.time
+    } as WorkoutPlan);
+    setIsCreatingWorkout(false);
+    setNewWorkout({
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      location: 'FitnessPark Сокольники',
+      estimatedDuration: 60,
+      participants: [],
+      afterWorkout: 'Бегу домой',
+      status: 'planned'
+    });
+  };
+
+  const handleAddWorkoutForSelectedDate = () => {
+    if (selectedDate) {
+      setNewWorkout({
+        ...newWorkout,
+        date: selectedDate.toISOString().slice(0, 10),
+      });
+      setIsCreatingWorkout(true);
+    }
   };
 
   return (
@@ -326,16 +280,16 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
                     </div>
                     <div className="flex items-center space-x-1">
                       <Clock className="h-3 w-3" />
-                      <span>{workout.time}</span>
+                      <span>{workout.estimatedDuration}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <MapPin className="h-3 w-3" />
                       <span>{workout.location}</span>
                     </div>
-                    {workout.friends.length > 0 && (
+                    {workout.participants.length > 0 && (
                       <div className="flex items-center space-x-1">
                         <Users className="h-3 w-3" />
-                        <span>{workout.friends.length}</span>
+                        <span>{workout.participants.length}</span>
                       </div>
                     )}
                   </div>
@@ -357,7 +311,7 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
       <AnimatePresence>
         {selectedDate && (
           <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
-            <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>
                   {selectedDate.toLocaleDateString('ru-RU', { 
@@ -368,28 +322,20 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
                   })}
                 </DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                {selectedDateWorkouts.length > 0 ? (
+              <div className="space-y-4 flex-1 overflow-y-auto">
+                {/* My workouts */}
+                {selectedDateWorkouts.my.length > 0 && (
                   <>
-                    {selectedDateWorkouts.map(workout => (
-                      <Card key={workout.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Добавляем небольшую задержку для плавного перехода между модальными окнами
-                        setSelectedDate(null);
-                        setTimeout(() => {
-                          setSelectedWorkout(workout);
-                        }, 100);
-                      }}>
+                    <h4 className="font-medium text-blue-600">Мои тренировки</h4>
+                    {selectedDateWorkouts.my.map(workout => (
+                      <Card key={workout.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setSelectedDate(null); setTimeout(() => { setSelectedWorkout(workout); }, 100); }}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-2">
                             <div>
                               <h4 className="font-medium">{workout.title}</h4>
                               <p className="text-sm text-muted-foreground line-clamp-2">{workout.description}</p>
                             </div>
-                            <Badge className={getTypeColor(workout.status)}>
-                              {getTypeLabel(workout.status)}
-                            </Badge>
+                            <Badge className={getTypeColor(workout.status)}>{getTypeLabel(workout.status)}</Badge>
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <div className="flex items-center space-x-1">
@@ -400,29 +346,60 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
                               <MapPin className="h-4 w-4" />
                               <span>{workout.location}</span>
                             </div>
-                            {workout.friends.length > 0 && (
+                            {workout.participants.length > 0 && (
                               <div className="flex items-center space-x-1">
                                 <Users className="h-4 w-4" />
-                                <span>{workout.friends.length} друзей</span>
+                                <span>{workout.participants.length} друзей</span>
                               </div>
                             )}
                           </div>
                         </CardContent>
                       </Card>
                     ))}
-                    <Button 
-                      onClick={() => addWorkoutToDate(selectedDate.toISOString().split('T')[0])}
-                      variant="outline" 
-                      className="w-full"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Добавить еще одну тренировку
-                    </Button>
                   </>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    На этот день тренировки не запланированы
-                  </p>
+                )}
+                {selectedDateWorkouts.others.length > 0 && (
+                  <>
+                    <h4 className="font-medium text-orange-500">Тренировки других пользователей</h4>
+                    {selectedDateWorkouts.others.map(workout => (
+                      <Card key={workout.id} className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => { setSelectedDate(null); setTimeout(() => { setSelectedWorkout(workout); }, 100); }}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h4 className="font-medium">{workout.title}</h4>
+                              <p className="text-sm text-muted-foreground line-clamp-2">{workout.description}</p>
+                            </div>
+                            <Badge className={getTypeColor(workout.status)}>{getTypeLabel(workout.status)}</Badge>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                            <div className="flex items-center space-x-1">
+                              <Clock className="h-4 w-4" />
+                              <span>{workout.time}</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <MapPin className="h-4 w-4" />
+                              <span>{workout.location}</span>
+                            </div>
+                            {workout.participants.length > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <Users className="h-4 w-4" />
+                                <span>{workout.participants.length} друзей</span>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </>
+                )}
+                {/* Если нет тренировокок, показать сообщение и кнопку */}
+                {selectedDateWorkouts.my.length === 0 && selectedDateWorkouts.others.length === 0 && (
+                  <div className="flex flex-col items-center gap-2 py-6">
+                    <span className="text-muted-foreground text-sm">Нет тренировок на этот день</span>
+                    <Button size="sm" onClick={handleAddWorkoutForSelectedDate}>
+                      Добавить тренировку
+                    </Button>
+                  </div>
                 )}
               </div>
             </DialogContent>
@@ -457,7 +434,7 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
                   </div>
                   <div className="flex items-center space-x-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{selectedWorkout.friends.length} друзей</span>
+                    <span className="text-sm">{selectedWorkout.participants.length} друзей</span>
                   </div>
                 </div>
 
@@ -482,10 +459,32 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
+                  {selectedWorkout.status === 'planned' && selectedWorkout.creator_id !== currentUser.id && !selectedWorkout.participants.some((p: User) => p.id === currentUser.id) && (
+                    <Button
+                      onClick={async () => {
+                        await workoutStore.updateWorkout(selectedWorkout.id, {
+                          ...selectedWorkout,
+                          participants: [...selectedWorkout.participants, currentUser]
+                        });
+                        setSelectedWorkout({
+                          ...selectedWorkout,
+                          participants: [...selectedWorkout.participants, currentUser]
+                        });
+                        if(userStore.user) {
+                          await userStore.updateUserStats("totalWorkouts", 1);
+                          await userStore.updateUserStats("workoutsWithFriends", 1);
+                        }
+                       }}
+                      size="sm"
+                      className="bg-orange-500 hover:bg-orange-600 flex-1"
+                    >
+                      Записаться
+                    </Button>
+                  )}
                   {selectedWorkout.status === 'planned' && (
                     <Button
                       onClick={() => {
-                        onUpdateWorkout(selectedWorkout.id, { status: 'completed' });
+                        workoutStore.updateWorkout(selectedWorkout.id, { ...selectedWorkout, status: 'completed' });
                         setSelectedWorkout(null);
                       }}
                       size="sm"
@@ -496,7 +495,7 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
                   )}
                   <Button
                     onClick={() => {
-                      onDeleteWorkout(selectedWorkout.id);
+                      workoutStore.deleteWorkout(selectedWorkout.id);
                       setSelectedWorkout(null);
                     }}
                     variant="outline"
@@ -619,4 +618,6 @@ export function CalendarPage({ workouts, currentUser, onAddWorkout, onUpdateWork
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export { CalendarPage };

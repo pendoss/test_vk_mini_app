@@ -10,16 +10,16 @@ import {
   Avatar,
   NavIdProps,
 } from '@vkontakte/vkui';
-import { UserInfo } from '@vkontakte/vk-bridge';
 import { useRouteNavigator } from '@vkontakte/vk-mini-apps-router';
+import {User} from "@/entities/user";
 
 export interface HomeProps extends NavIdProps {
-  fetchedUser?: UserInfo;
+  fetchedUser?: User;
   onOpenFitQuest?: () => void;
 }
 
 export const Home: FC<HomeProps> = ({ id, fetchedUser, onOpenFitQuest }) => {
-  const { photo_200, city, first_name, last_name } = { ...fetchedUser };
+  const { avatar, city, firstName, lastName } = { ...fetchedUser };
   const routeNavigator = useRouteNavigator();
 
   return (
@@ -27,8 +27,8 @@ export const Home: FC<HomeProps> = ({ id, fetchedUser, onOpenFitQuest }) => {
       <PanelHeader>TrainSync</PanelHeader>
       {fetchedUser && (
         <Group header={<Header size="s">Добро пожаловать!</Header>}>
-          <Cell before={photo_200 && <Avatar src={photo_200} />} subtitle={city?.title}>
-            {`${first_name} ${last_name}`}
+          <Cell before={avatar && <Avatar src={avatar} />} subtitle={city}>
+            {`${firstName} ${lastName}`}
           </Cell>
         </Group>
       )}

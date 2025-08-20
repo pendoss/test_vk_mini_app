@@ -5,13 +5,7 @@ import { Avatar, AvatarFallback } from '@/shared/ui/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/ui/tabs';
 import { Trophy, Medal, Award, TrendingUp, Clock, Calendar } from 'lucide-react';
 import { UserProfileModal } from '@/shared/ui/UserProfileModal';
-
-interface User {
-  id: string;
-  name: string;
-  points: number;
-  level: number;
-}
+import {User} from "@/entities/user";
 
 interface LeaderboardEntry {
   id: string;
@@ -32,7 +26,7 @@ interface LeaderboardPageProps {
 }
 
 export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<User>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   
   const [leaderboard] = useState<LeaderboardEntry[]>([

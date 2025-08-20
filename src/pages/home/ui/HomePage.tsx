@@ -1,12 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui';
 import { Badge, Skeleton } from '@/shared/ui';
-import { useUserStore, useWorkoutStore } from '@/app/providers/store';
 import { observer } from 'mobx-react-lite';
-import type { WorkoutPlan } from '@/entities/workout/api';
+import {WorkoutPlan} from "@/entities/workout/model/types.ts";
+import {userStore} from "@/entities/user";
+import {workoutStore} from "@/entities/workout";
 
 export const HomePage = observer(() => {
-  const userStore = useUserStore();
-  const workoutStore = useWorkoutStore();
 
   const isLoading = userStore.loadingStates.home || userStore.loadingStates.user || workoutStore.loadingStates.todayWorkouts;
   const hasError = userStore.error || workoutStore.error;
@@ -54,8 +53,8 @@ export const HomePage = observer(() => {
     );
   }
 
-  const userLevel = userStore.userLevel;
-  const userPoints = userStore.userPoints;
+  const userLevel = userStore.user?.level;
+  const userPoints = userStore.user?.points;
   const userName = userStore.userName;
   const todayWorkouts = workoutStore.todayWorkouts;
   const todayWorkoutsCount = todayWorkouts.length;
