@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import legacy from '@vitejs/plugin-legacy';
+import { fileURLToPath, URL } from 'node:url';
 
 function handleModuleDirectivesPlugin() {
   return {
@@ -23,6 +24,14 @@ function handleModuleDirectivesPlugin() {
  */
 export default defineConfig({
   base: './',
+  server: {
+    allowedHosts: ["0.0.0.0", "fleet-explicitly-hippo.ngrok-free.app"],
+  },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
 
   plugins: [
     react(),
