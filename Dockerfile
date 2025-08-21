@@ -1,16 +1,11 @@
-# Build stage
-FROM golang:1.24-alpine3.22 AS builder
-
+FROM node:20-alpine AS builder
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
-RUN go build -o server main.go
+RUN npm run build
 
-# Final stage
-FROM alpine:3.22
-
-
-COPY --from=builder /app/server /server
-
-EXPOSE 8090
-
-CMD ["/server", "serve", "--http", "0.0.0.0:8090"]
+FROM nginx:alpine
+COPY --from=builder /app/build /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
