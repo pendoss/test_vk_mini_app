@@ -1,3 +1,5 @@
+https://vk.com/app54023685 
+
 # Basic [VK Bridge](https://github.com/VKCOM/vk-bridge) + [VKUI](https://github.com/VKCOM/VKUI) + [VK Miniapps Router](https://github.com/VKCOM/vk-mini-apps-router) app
 
 Этот шаблон предоставляет базовый код и настройки для создания мини-приложения внутри ВКонтакте.  
