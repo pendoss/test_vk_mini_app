@@ -58,7 +58,6 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
     const handleFinish = async () => {
         if (!userInfo) return;
         try {
-            // Преобразуем записи для бэкенда: только name, value
             const backendRecords = records
                 .filter(r => r.name.trim() && r.value > 0)
                 .map(r => ({
@@ -70,18 +69,15 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
                 alert('Добавьте хотя бы один валидный рекорд');
                 return;
             }
-            // 1. Создать рекорды и получить пользователя с обновлённым полем records
             const userWithRecords = await userApi.createRecord(userInfo.id, backendRecords);
-            // 2. Обновить остальные поля пользователя, передав актуальные records
             const updatedUser = await userApi.updateUser(userInfo.id, {
                 primaryGym,
                 weight: Number(weight),
-                records: userWithRecords.records // обязательно передать новые рекорды
+                records: userWithRecords.records
             }) as User;
             userStore.setUser(updatedUser);
             onClose();
         } catch (error) {
-            // Можно добавить отображение ошибки пользователю
             console.error('Ошибка при обновлении профиля:', error);
             alert('Ошибка при сохранении рекордов. Проверьте заполнение всех полей и попробуйте снова.');
         }
@@ -116,7 +112,6 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
                         </div>
                     )}
 
-                    {/* User Info Section - Transforms smoothly */}
                     {!isLoading && (
                         <div
                             className={`absolute inset-0 flex items-center justify-center transition-all duration-1500 ease-in-out ${
@@ -182,8 +177,6 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* Records Section */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h4>Personal Records</h4>
@@ -238,8 +231,6 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
                                             ))}
                                         </div>
                                     </div>
-
-                                    {/* Action Button */}
                                     <div className="pt-4">
                                         <Button
                                             onClick={handleFinish}

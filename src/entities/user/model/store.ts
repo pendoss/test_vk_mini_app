@@ -33,15 +33,6 @@ class UserStore {
     user: User | null = null;
     isLoading = false;
     error: string | null = null;
-    loadingStates = {
-        user: false,
-        profile: false,
-        friends: false,
-        requests: false,
-        leaderboard: false,
-        search: false,
-        home: false,
-    };
 
     constructor() {
         makeAutoObservable(this);
@@ -69,12 +60,6 @@ class UserStore {
         }
     }
 
-    clearError() {
-        runInAction(() => {
-            this.error = null;
-        });
-    }
-
     async updateUserStats(
         field: keyof Pick<User, 'workoutsCompleted' | 'workoutsPlaned' | 'workoutsWithFriends' | 'totalWorkouts' | 'friendAdded'>,
         increment: number = 1
@@ -91,10 +76,6 @@ class UserStore {
         }
     }
 
-    get isLoadingAny() {
-        return Object.values(this.loadingStates).some(loading => loading);
-    }
-
     async updateUserScore(): Promise<void> {
         await runInAction(async () => {
             if (this.user) {
@@ -104,14 +85,6 @@ class UserStore {
             }
         })
 
-    }
-
-    get userName() {
-        return this.user?.name ||
-            (this.user?.firstName && this.user?.lastName
-                ? `${this.user.firstName} ${this.user.lastName}`
-                : this.user?.firstName) ||
-            'Пользователь';
     }
 
     setUser(user: User) {

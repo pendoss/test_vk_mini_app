@@ -14,7 +14,6 @@ export function RecordEditModal({ record, isOpen, onSave, onCancel, loading }: R
   const [name, setName] = useState(record?.name || '');
   const [value, setValue] = useState(record?.value || 0);
 
-  // Reset state when record changes
   useEffect(() => {
     setName(record?.name || '');
     setValue(record?.value || 0);

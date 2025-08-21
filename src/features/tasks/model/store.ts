@@ -36,14 +36,6 @@ class TaskStore {
             this.tasks = tasks;
         });
     }
-    setUserTasks(tasks: UserTasks[]) {
-        runInAction(() => {
-            this.userTasks = tasks.map(item => ({
-                ...item,
-                task: item.expand?.task_id?.[0] || item.task
-            }));
-        });
-    }
 
     async fetchTasks() {
         const mappedTasks = await taskApi.getTasks();

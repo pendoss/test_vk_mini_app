@@ -45,8 +45,6 @@ export function FriendsPage() {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
-
-  // Improved filter users by name (firstName, lastName, name)
   const filteredUsers = users.filter(user => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;

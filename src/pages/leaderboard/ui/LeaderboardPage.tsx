@@ -14,7 +14,7 @@ export interface LeaderboardEntry {
   points: number;
   level: number;
   rank: number;
-  change: number; // -1, 0, 1 для изменения позиции
+  change: number;
   city: string;
   gym: string;
   todayPoints: number;
@@ -50,11 +50,11 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
         points: user.point ?? 0,
         level: user.level ?? 0,
         rank: idx + 1,
-        change: 0, // No backend info, default to 0
+        change: 0,
         city: user.city ?? '',
         gym: user.primaryGym ?? '',
-        todayPoints: 0, // No backend info, default to 0
-        weekPoints: 0, // No backend info, default to 0
+        todayPoints: 0,
+        weekPoints: 0,
         avatar: user.avatar ?? undefined,
       }));
       setLeaderboard(leaderboardEntries);
@@ -87,7 +87,7 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
   const openUserProfile = (entry: LeaderboardEntry) => {
     const userProfileData = {
       ...entry,
-      trainingDays: Math.floor(Math.random() * 100) + 20, // mock data
+      trainingDays: Math.floor(Math.random() * 100) + 20,
       achievements: [],
       records: {},
     };
@@ -115,7 +115,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
 
   return (
     <div className="space-y-6">
-      {/* Current User Stats */}
       <Card className="border-primary">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -143,7 +142,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-center space-x-5 py-8">
-                {/* Second Place */}
                 <div 
                   className="flex flex-col items-center space-y-3 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => topThree[1] && openUserProfile(topThree[1])}
@@ -162,8 +160,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
                   </div>
                   <Badge variant="secondary">2 место</Badge>
                 </div>
-
-                {/* First Place */}
                 <div 
                   className="flex flex-col items-center space-y-3 -mt-8 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => topThree[0] && openUserProfile(topThree[0])}
@@ -182,8 +178,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
                   </div>
                   <Badge className="bg-yellow-500">1 место</Badge>
                 </div>
-
-                {/* Third Place */}
                 <div 
                   className="flex flex-col items-center space-y-3 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => topThree[2] && openUserProfile(topThree[2])}
@@ -205,8 +199,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
               </div>
             </CardContent>
           </Card>
-
-          {/* Остальные участники */}
           <Card>
             <CardHeader>
               <CardTitle>Остальные участники</CardTitle>
@@ -257,8 +249,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
               </div>
             </CardContent>
           </Card>
-      
-      {/* User Profile Modal */}
       {selectedUser &&
           <UserProfileModal
               user={selectedUser}
@@ -266,10 +256,6 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
               onClose={() => {
                 setIsProfileModalOpen(false);
                 setSelectedUser(null);
-              }}
-              onSendFriendRequest={(userId) => {
-                console.log('Отправить заявку в друзья:', userId);
-                // Здесь можно добавить логику отправки заявки в друзья
               }}
           />
       }

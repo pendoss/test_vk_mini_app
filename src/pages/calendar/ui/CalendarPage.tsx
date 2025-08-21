@@ -51,7 +51,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
 
   const getFirstDayOfMonth = (date: Date) => {
     const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-    return firstDay === 0 ? 6 : firstDay - 1; // Convert to Monday = 0 format
+    return firstDay === 0 ? 6 : firstDay - 1;
   };
 
   const navigateMonth = (direction: number) => {
@@ -67,11 +67,9 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
     );
   };
 
-  // Split workouts for each day
   const getWorkoutsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const dayWorkouts = workouts.filter(event => {
-      // Robust date comparison: parse both sides to Date objects and compare only the date part
       const eventDate = new Date(event.date);
       const compareDate = new Date(dateStr);
       return (
@@ -91,8 +89,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
     .filter(w => w.status === 'planned' && new Date(w.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
-
-  // Simple markdown renderer for basic formatting
   const renderMarkdown = (markdown: string) => {
     return markdown
       .replace(/^# (.*$)/gim, '<h4 class="text-base font-semibold mb-2 text-primary">$1</h4>')
@@ -199,7 +195,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
 
   return (
     <div className="space-y-4">
-      {/* Calendar Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -221,20 +216,14 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1">
-            {/* Week day headers */}
             {weekDays.map(day => (
               <div key={day} className="p-2 text-center text-sm text-muted-foreground font-medium">
                 {day}
               </div>
             ))}
-            
-            {/* Calendar days */}
             {renderCalendarDays()}
           </div>
-
-          {/* Legend */}
           <div className="flex flex-wrap items-center justify-center gap-4 mt-6 text-xs">
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-primary rounded"></div>
@@ -255,8 +244,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Upcoming Workouts */}
       <Card>
         <CardHeader>
           <CardTitle>Ближайшие тренировки</CardTitle>
@@ -306,8 +293,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Selected Day Modal */}
       <AnimatePresence>
         {selectedDate && (
           <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
@@ -323,7 +308,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4 flex-1 overflow-y-auto">
-                {/* My workouts */}
                 {selectedDateWorkouts.my.length > 0 && (
                   <>
                     <h4 className="font-medium text-blue-600">Мои тренировки</h4>
@@ -392,7 +376,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                     ))}
                   </>
                 )}
-                {/* Если нет тренировокок, показать сообщение и кнопку */}
                 {selectedDateWorkouts.my.length === 0 && selectedDateWorkouts.others.length === 0 && (
                   <div className="flex flex-col items-center gap-2 py-6">
                     <span className="text-muted-foreground text-sm">Нет тренировок на этот день</span>
@@ -406,8 +389,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
           </Dialog>
         )}
       </AnimatePresence>
-
-      {/* Workout Detail Modal */}
       <Dialog open={!!selectedWorkout} onOpenChange={() => setSelectedWorkout(null)}>
         <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-0">
           <DialogHeader className="flex-shrink-0 p-4 border-b">
@@ -418,7 +399,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {selectedWorkout && (
               <>
-                {/* Basic Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -441,8 +421,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                 <Badge className={getTypeColor(selectedWorkout.status)}>
                   {getTypeLabel(selectedWorkout.status)}
                 </Badge>
-
-                {/* Description */}
                 {selectedWorkout.description && (
                   <div>
                     <h4 className="font-medium mb-2">План тренировки</h4>
@@ -456,8 +434,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                     </div>
                   </div>
                 )}
-
-                {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
                   {selectedWorkout.status === 'planned' && selectedWorkout.creator_id !== currentUser.id && !selectedWorkout.participants.some((p: User) => p.id === currentUser.id) && (
                     <Button
@@ -514,8 +490,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Create Workout Modal */}
       <AnimatePresence>
         {isCreatingWorkout && (
           <Dialog open={isCreatingWorkout} onOpenChange={setIsCreatingWorkout}>

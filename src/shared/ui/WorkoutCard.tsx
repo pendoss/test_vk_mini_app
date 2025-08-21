@@ -98,7 +98,6 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
                 <Users className="h-4 w-4 ml-2" />
                 <span>{participantsCount}</span>
               </div>
-              {/* Friends list */}
               {workout.participants.length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">Участники:</p>

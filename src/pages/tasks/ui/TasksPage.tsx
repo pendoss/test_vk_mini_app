@@ -51,7 +51,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
 
     return (
         <div className="space-y-4">
-            {/* Stats */}
             <div className="grid grid-cols-2 gap-3">
                 <Card>
                     <CardContent className="p-4">
@@ -82,7 +81,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                 </Card>
             </div>
 
-            {/* Progress to next level */}
             <Card>
                 <CardContent className="p-4">
                     <div className="space-y-2">
@@ -113,7 +111,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                                     <Card className="hover:shadow-md transition-all duration-200 h-full">
                                         <CardContent className="p-3">
                                             <div className="space-y-3">
-                                                {/* Header */}
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex items-center space-x-2">
                                                         <Badge
@@ -125,8 +122,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                                                     </div>
                                                     <Badge variant="outline" className="text-xs">+{task.points}</Badge>
                                                 </div>
-
-                                                {/* Title */}
                                                 <div>
                                                     <h4 className="text-sm font-medium leading-tight mb-1">{task.title}</h4>
                                                     <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
@@ -143,8 +138,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                 )}
 
             </div>
-
-            {/* Completed Tasks */}
             {taskStore.completedTasks.length > 0 && (
                 <div>
                     <h4 className="mb-3 text-sm text-muted-foreground">Выполненные задания</h4>
@@ -173,7 +166,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                 </div>
             )}
 
-            {/* Task Detail Modal */}
             <AnimatePresence>
                 {selectedTask && (
                     <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
@@ -199,7 +191,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                             </DialogHeader>
 
                             <div className="space-y-4">
-                                {/* Description */}
                                 <div className="space-y-2">
                                     <h4 className="font-medium">Описание задания</h4>
                                     <div className="prose prose-sm max-w-none">

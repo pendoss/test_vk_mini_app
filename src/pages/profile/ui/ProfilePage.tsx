@@ -24,18 +24,12 @@ interface UserProfile {
 export const ProfilePage = observer(() => {
   const currentUser = userStore.user;
   if (!currentUser) return <div>Загрузка профиля...</div>;
-
-  // Функция для форматирования даты рождения из VK API
   const formatBirthDate = (bdate: string | null): string => {
     if (!bdate) return 'Не указана';
-
-    // VK может возвращать формат DD.MM.YYYY или DD.MM
     const parts = bdate.split('.');
     if (parts.length === 3) {
-      // Полная дата DD.MM.YYYY
       return `${parts[0]}.${parts[1]}.${parts[2]}`;
     } else if (parts.length === 2) {
-      // Только день и месяц DD.MM
       return `${parts[0]}.${parts[1]}`;
     }
 
@@ -74,36 +68,30 @@ export const ProfilePage = observer(() => {
     fetchUserRecords();
   }, [currentUser]);
 
-  // Edit weight
   const handleSaveWeight = async () => {
     setLoading(true);
     await userApi.updateUser(currentUser.id, { weight: Number(weightInput) });
-    // Fetch updated user and update MobX store
     const updatedUser = await userApi.getUser(currentUser.id);
     if (updatedUser) userStore.user = updatedUser;
     setEditingWeight(false);
     setLoading(false);
   };
 
-  // Edit gym
   const handleSaveGym = async () => {
     setLoading(true);
     await userApi.updateUser(currentUser.id, { primaryGym: gymInput });
-    // Fetch updated user and update MobX store
     const updatedUser = await userApi.getUser(currentUser.id);
     if (updatedUser) userStore.user = updatedUser;
     setEditingGym(false);
     setLoading(false);
   };
 
-  // Edit record
   const handleSaveRecord = async (data: { name: string; value: number }) => {
     if (!editingRecordId) return;
     setLoading(true);
     await userApi.updateRecord(editingRecordId, data);
     setEditingRecordId(null);
     setLoading(false);
-    // Refetch records
     const records = await userApi.getUserRecords(currentUser.records);
     setUserRecords(records);
   };
@@ -111,24 +99,18 @@ export const ProfilePage = observer(() => {
     setEditingRecordId(null);
   };
 
-  // Delete record
   const handleDeleteRecord = async (recordId: string) => {
     setLoading(true);
     await userApi.deleteRecord(recordId);
-    // Get the current user's records array (fresh)
     const currentRecords = Array.isArray(currentUser.records) ? currentUser.records : [];
-    // Remove the deleted record and filter out any invalid IDs
     const updatedRecords = currentRecords.filter((id: string) => id !== recordId && id.length > 0);
-    // Fetch only valid record IDs from the database
     const validRecordsObjs = updatedRecords.length > 0 ? await userApi.getUserRecords(updatedRecords) : [];
     const validRecordIds = validRecordsObjs.map(r => r.id);
     await userApi.updateUser(currentUser.id, { records: validRecordIds });
     setLoading(false);
-    // Refetch records
     setUserRecords(validRecordsObjs);
   };
 
-  // Add record
   const handleAddRecord = async (data: { name: string; value: number }) => {
     setLoading(true);
     const created = await userApi.createRecord(currentUser.id, [data]);
@@ -155,7 +137,6 @@ export const ProfilePage = observer(() => {
 
   return (
     <div className="space-y-4 p-4">
-      {/* Profile Header */}
       <Card>
         <CardHeader>
           <div className="flex items-center space-x-4">
@@ -226,7 +207,6 @@ export const ProfilePage = observer(() => {
             </div>
             <div>
               <p className="text-muted-foreground">Баллы</p>
-              {/*<p>{currentUser.points}</p>*/}
             </div>
           </div>
         </CardContent>

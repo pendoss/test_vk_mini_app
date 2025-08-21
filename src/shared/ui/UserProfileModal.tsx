@@ -10,7 +10,6 @@ interface UserProfileModalProps {
   user: UserProfileData | null;
   isOpen: boolean;
   onClose: () => void;
-  onSendFriendRequest?: (userId: string) => void;
 }
 
 export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProps) {
@@ -29,7 +28,6 @@ export function UserProfileModal({ user, isOpen, onClose }: UserProfileModalProp
         </DialogHeader>
 
         <div className="space-y-6 max-w-[80vw]">
-          {/* Header */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-start space-x-4">

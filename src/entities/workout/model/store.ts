@@ -142,48 +142,6 @@ class WorkoutStore {
       throw error;
     }
   }
-
-  clearError = () => {
-    runInAction(() => {
-      this.error = null;
-    });
-  }
-
-  get isLoadingAny() {
-    return Object.values(this.loadingStates).some(loading => loading);
-  }
-
-  completedWorkouts(userId: string) {
-    return this.workouts.filter((w: WorkoutPlan) => w.status === 'completed' && w.creator_id === userId);
-  }
-
-  plannedWorkouts(userId: string) {
-    return this.workouts.filter((w: WorkoutPlan) => w.status === 'planned' && w.creator_id === userId);
-  }
-
-  get cancelledWorkouts() {
-    return this.workouts.filter((w: WorkoutPlan) => w.status === 'cancelled');
-  }
-
-  get upcomingWorkouts() {
-    const now = new Date();
-    return this.workouts.filter((w: WorkoutPlan) => {
-      const workoutDate = new Date(`${w.date}T${w.time}`);
-      return workoutDate > now && w.status === 'planned';
-    }).sort((a: WorkoutPlan, b: WorkoutPlan) => {
-      const dateA = new Date(`${a.date}T${a.time}`);
-      const dateB = new Date(`${b.date}T${b.time}`);
-      return dateA.getTime() - dateB.getTime();
-    });
-  }
-
-  getWorkoutById = (id: string) => {
-    return this.workouts.find((w: WorkoutPlan) => w.id === id);
-  }
-
-  getWorkoutsByDate = (date: string) => {
-    return this.workouts.filter((w: WorkoutPlan) => w.date === date);
-  }
 }
 
 export const workoutStore = new WorkoutStore();
