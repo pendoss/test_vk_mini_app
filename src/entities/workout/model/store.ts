@@ -37,12 +37,23 @@ class WorkoutStore {
     const participants: User[] = (await Promise.all(
       apiWorkout.participants.map(id => userStore.getUserById(id))
     )).filter(Boolean) as User[];
-    return { ...apiWorkout, participants };
+    let time = apiWorkout.time;
+    if (time && time.length > 5) {
+      const d = new Date(time);
+      time = d.toISOString().slice(11, 16);
+    }
+    return { ...apiWorkout, participants, time };
   }
 
   convertWorkoutToApi = (workout: WorkoutPlan): WorkoutPlanApi => {
+    let time = workout.time;
+    if (time && time.length > 5) {
+      const d = new Date(time);
+      time = d.toISOString().slice(11, 16);
+    }
     return {
       ...workout,
+      time,
       participants: workout.participants.map(user => user.id)
     };
   }

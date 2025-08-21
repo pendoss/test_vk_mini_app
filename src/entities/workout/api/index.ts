@@ -1,9 +1,7 @@
 import { pb }  from "@/shared/api";
 import { WorkoutPlanApi } from "@/entities/workout/model/types";
 
-
 export class WorkoutApiService {
-  // Получить все тренировки пользователя
   async getWorkouts(userId: string): Promise<WorkoutPlanApi[]> {
     return await pb.collection("workouts").getFullList({ filter: `creator_id == ${userId}` }) as WorkoutPlanApi[];
   }
@@ -20,7 +18,6 @@ export class WorkoutApiService {
     return await pb.collection("workouts").update(id, workoutPlan) as WorkoutPlanApi;
  }
 
-
  async createWorkout(workoutPlan: WorkoutPlanApi): Promise<WorkoutPlanApi> {
     return await pb.collection("workouts").create(workoutPlan) as WorkoutPlanApi;
  }
@@ -30,5 +27,4 @@ export class WorkoutApiService {
  }
 }
 
-// Экспорт инстанса API
 export const workoutApi = new WorkoutApiService();

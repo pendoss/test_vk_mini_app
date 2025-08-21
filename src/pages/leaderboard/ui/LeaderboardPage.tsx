@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/ui/card';
 import { Badge } from '@/shared/ui/ui/badge';
 import { Avatar, AvatarFallback } from '@/shared/ui/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/ui/tabs';
-import { Trophy, Medal, Award, TrendingUp, Clock, Calendar } from 'lucide-react';
+import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
 import { UserProfileModal } from '@/shared/ui/UserProfileModal';
-import {User} from "@/entities/user";
+import { userApi } from '@/entities/user';
+import { User } from "@/entities/user";
+import {ScreenSpinner} from "@vkontakte/vkui";
 
-interface LeaderboardEntry {
+export interface LeaderboardEntry {
   id: string;
   name: string;
   points: number;
@@ -24,85 +25,49 @@ interface LeaderboardEntry {
 interface LeaderboardPageProps {
   currentUser: User;
 }
+export interface UserProfileData extends LeaderboardEntry{
+  rank: number;
+  trainingDays: number;
+  achievements: string[];
+}
 
 export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
-  const [selectedUser, setSelectedUser] = useState<User>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfileData | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  
-  const [leaderboard] = useState<LeaderboardEntry[]>([
-    {
-      id: '1',
-      name: 'Михаил Козлов',
-      points: 2850,
-      level: 18,
-      rank: 1,
-      change: 0,
-      city: 'Москва',
-      gym: 'World Gym',
-      todayPoints: 45,
-      weekPoints: 320
-    },
-    {
-      id: '2',
-      name: 'Елена Смирнова',
-      points: 2780,
-      level: 17,
-      rank: 2,
-      change: 1,
-      city: 'Санкт-Петербург',
-      gym: 'FitnessPark',
-      todayPoints: 35,
-      weekPoints: 280
-    },
-    {
-      id: '3',
-      name: 'Дмитрий Волков',
-      points: 2650,
-      level: 16,
-      rank: 3,
-      change: -1,
-      city: 'Москва',
-      gym: 'Gold Gym',
-      todayPoints: 20,
-      weekPoints: 250
-    },
-    {
-      id: '4',
-      name: 'Анна Петрова',
-      points: 2420,
-      level: 15,
-      rank: 4,
-      change: 2,
-      city: 'Новосибирск',
-      gym: 'Fitness House',
-      todayPoints: 30,
-      weekPoints: 215
-    },
-    {
-      id: '5',
-      name: 'Сергей Иванов',
-      points: 2380,
-      level: 15,
-      rank: 5,
-      change: 0,
-      city: 'Екатеринбург',
-      gym: 'Power Gym',
-      todayPoints: 25,
-      weekPoints: 200
-    },
-    {
-      id: currentUser.id,  // Используем ID текущего пользователя
-      name: currentUser.name,  // Используем имя текущего пользователя
-      points: currentUser.points,
-      level: currentUser.level,
-      rank: 12,
-      change: 3,
-      city: 'Москва',
-      gym: 'FitnessPark Сокольники',
-      todayPoints: 40,
-      weekPoints: 180
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchLeaderboard = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await userApi.getLeaderboardUsers({ limit: 30 });
+      const items = response.items;
+      const leaderboardEntries: LeaderboardEntry[] = items.map((user, idx) => ({
+        id: user.id,
+        name: user.name,
+        points: user.point ?? 0,
+        level: user.level ?? 0,
+        rank: idx + 1,
+        change: 0, // No backend info, default to 0
+        city: user.city ?? '',
+        gym: user.primaryGym ?? '',
+        todayPoints: 0, // No backend info, default to 0
+        weekPoints: 0, // No backend info, default to 0
+        avatar: user.avatar ?? undefined,
+      }));
+      setLeaderboard(leaderboardEntries);
+    } catch (err) {
+      setError('Failed to load leaderboard');
+    } finally {
+      setLoading(false);
     }
-  ]);
+  }, []);
+
+  useEffect(() => {
+    fetchLeaderboard();
+  }, [fetchLeaderboard]);
 
   const getTrophyIcon = (rank: number) => {
     switch (rank) {
@@ -120,42 +85,13 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
   };
 
   const openUserProfile = (entry: LeaderboardEntry) => {
-    // Преобразуем LeaderboardEntry в UserProfileData
     const userProfileData = {
-      id: entry.id,
-      name: entry.name,
-      points: entry.points,
-      level: entry.level,
-      city: entry.city,
-      rank: entry.rank,
+      ...entry,
       trainingDays: Math.floor(Math.random() * 100) + 20, // mock data
-      achievements: [
-        'Первая тренировка',
-        'Месяц без пропусков',
-        'Личный рекорд'
-      ],
-      records: {
-        'Жим лежа': Math.floor(Math.random() * 50) + 80,
-        'Становая тяга': Math.floor(Math.random() * 80) + 120,
-        'Присед': Math.floor(Math.random() * 60) + 100
-      },
-      recentWorkouts: [
-        {
-          id: '1',
-          title: 'Тренировка груди',
-          date: new Date().toISOString(),
-          status: 'completed' as const
-        },
-        {
-          id: '2',
-          title: 'Кардио',
-          date: new Date(Date.now() - 86400000).toISOString(),
-          status: 'completed' as const
-        }
-      ],
-      isFriend: Math.random() > 0.5 // mock
+      achievements: [],
+      records: {},
     };
-    
+
     setSelectedUser(userProfileData);
     setIsProfileModalOpen(true);
   };
@@ -170,52 +106,43 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
   const topThree = leaderboard.slice(0, 3);
   const others = leaderboard.slice(3);
 
+  if(loading) {
+    return (<ScreenSpinner/>)
+  }
+  if (error) {
+    return (<p>Error</p>)
+  }
+
   return (
     <div className="space-y-6">
       {/* Current User Stats */}
       <Card className="border-primary">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            <span>Ваша позиция</span>
+            <span><strong>Ваша позиция</strong></span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              {getTrophyIcon(12)}
-              <span className="text-lg">#12</span>
+              {getTrophyIcon(leaderboard.find((entry) => entry.id === currentUser.id)?.rank || 0)}
             </div>
             <div>
               <p>{currentUser.name}</p>
             </div>
             <div className="ml-auto text-right">
-              <p className="text-lg">{currentUser.points} баллов</p>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                {getChangeIcon(3)}
-                <span>+3 позиции</span>
-              </div>
+              <p className="text-lg">{currentUser.point} баллов</p>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">Общий</TabsTrigger>
-          <TabsTrigger value="today">За день</TabsTrigger>
-          <TabsTrigger value="week">За неделю</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="space-y-6">
-          {/* Top 3 Podium */}
           <Card>
             <CardHeader>
               <CardTitle>Топ-3 игроков</CardTitle>
               <CardDescription>Лучшие по общему количеству баллов</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-end justify-center space-x-8 py-8">
+              <div className="flex items-end justify-center space-x-5 py-8">
                 {/* Second Place */}
                 <div 
                   className="flex flex-col items-center space-y-3 cursor-pointer hover:opacity-80 transition-opacity"
@@ -330,122 +257,23 @@ export function LeaderboardPage({ currentUser }: LeaderboardPageProps) {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="today" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5" />
-                <span>Лидерборд за сегодня</span>
-              </CardTitle>
-              <CardDescription>Рейтинг по баллам, набранным сегодня</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {leaderboard
-                  .sort((a, b) => b.todayPoints - a.todayPoints)
-                  .map((entry, index) => (
-                    <div
-                      key={entry.id}
-                      onClick={() => entry.id !== currentUser.id && openUserProfile(entry)}
-                      className={`
-                        flex items-center space-x-4 p-4 rounded-lg border transition-colors
-                        ${entry.id === currentUser.id ? 'border-primary bg-primary/5' : 'border-border'}
-                        ${entry.id !== currentUser.id ? 'cursor-pointer hover:bg-muted/50' : ''}
-                      `}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-lg text-muted-foreground w-8">#{index + 1}</span>
-                        <Avatar>
-                          <AvatarFallback>
-                            {entry.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <p className="font-medium">{entry.name}</p>
-                          {entry.id === currentUser.id && <Badge variant="outline">Вы</Badge>}
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="font-semibold">{entry.todayPoints} баллов</p>
-                        <p className="text-xs text-muted-foreground">сегодня</p>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="week" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="h-5 w-5" />
-                <span>Лидерборд за неделю</span>
-              </CardTitle>
-              <CardDescription>Рейтинг по баллам, набранным за последнюю неделю</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {leaderboard
-                  .sort((a, b) => b.weekPoints - a.weekPoints)
-                  .map((entry, index) => (
-                    <div
-                      key={entry.id}
-                      onClick={() => entry.id !== currentUser.id && openUserProfile(entry)}
-                      className={`
-                        flex items-center space-x-4 p-4 rounded-lg border transition-colors
-                        ${entry.id === currentUser.id ? 'border-primary bg-primary/5' : 'border-border'}
-                        ${entry.id !== currentUser.id ? 'cursor-pointer hover:bg-muted/50' : ''}
-                      `}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-lg text-muted-foreground w-8">#{index + 1}</span>
-                        <Avatar>
-                          <AvatarFallback>
-                            {entry.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <p className="font-medium">{entry.name}</p>
-                          {entry.id === currentUser.id && <Badge variant="outline">Вы</Badge>}
-                        </div>
-                      </div>
-                      
-                      <div className="text-right">
-                        <p className="font-semibold">{entry.weekPoints} баллов</p>
-                        <p className="text-xs text-muted-foreground">за неделю</p>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
       
       {/* User Profile Modal */}
-      <UserProfileModal
-        user={selectedUser}
-        isOpen={isProfileModalOpen}
-        onClose={() => {
-          setIsProfileModalOpen(false);
-          setSelectedUser(null);
-        }}
-        onSendFriendRequest={(userId) => {
-          console.log('Отправить заявку в друзья:', userId);
-          // Здесь можно добавить логику отправки заявки в друзья
-        }}
-      />
+      {selectedUser &&
+          <UserProfileModal
+              user={selectedUser}
+              isOpen={isProfileModalOpen}
+              onClose={() => {
+                setIsProfileModalOpen(false);
+                setSelectedUser(null);
+              }}
+              onSendFriendRequest={(userId) => {
+                console.log('Отправить заявку в друзья:', userId);
+                // Здесь можно добавить логику отправки заявки в друзья
+              }}
+          />
+      }
+
     </div>
   );
 }

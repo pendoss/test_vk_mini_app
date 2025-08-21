@@ -24,7 +24,7 @@ function mapVkUserToApplication(userInfo: UserInfo): User {
         weight: 0,
         primaryGym: "",
         records: [""],
-        points: 0,
+        point: 0,
     };
 
 }
@@ -48,7 +48,6 @@ class UserStore {
         this.initializeUser();
     }
 
-    // Инициализация пользователя при запуске приложения
     async initializeUser() {
         try {
             await this.fetchCurrentUser();
@@ -57,14 +56,12 @@ class UserStore {
         }
     }
 
-
-    // Получить текущего пользователя VK и сохранить в стор
     async fetchCurrentUser() {
         this.isLoading = true;
         this.error = null;
         const userInfo = await bridge.send('VKWebAppGetUserInfo');
         const existingRecord = await userApi.getUser(userInfo.id.toString());
-        if (existingRecord) {// TODO: подумать правильный ли пользователь у меня загружается
+        if (existingRecord) {
             this.setUser(existingRecord);
         } else {
             const user = await userApi.createUser(mapVkUserToApplication(userInfo));
@@ -72,8 +69,6 @@ class UserStore {
         }
     }
 
-    // Получить данные для главной страницы
-    // Очистить ошибки
     clearError() {
         runInAction(() => {
             this.error = null;
@@ -88,6 +83,7 @@ class UserStore {
             if (this.user) {
                 this.user[field] = (this.user[field] ?? 0) + increment;
             }
+            this.updateUserScore();
         });
         if (this.user) {
             await taskStore.checkAndUpdateTasksAfterUserAction();
@@ -95,16 +91,20 @@ class UserStore {
         }
     }
 
-    // Геттеры для удобства
     get isLoadingAny() {
         return Object.values(this.loadingStates).some(loading => loading);
     }
 
-    // get userPoints() {
-    //   return this.homeData?.user?.points || this.user?.points || 0;
-    // }
+    async updateUserScore(): Promise<void> {
+        await runInAction(async () => {
+            if (this.user) {
+                this.user.point = this.user.workoutsPlaned * 10 + this.user.workoutsCompleted * 15 + this.user.workoutsWithFriends * 20 ;
+                this.user.level = Math.floor(this.user.point / 500);
+                await userApi.updateUser(this.user.id, {level: this.user.level, point: this.user.point} );
+            }
+        })
 
-
+    }
 
     get userName() {
         return this.user?.name ||
@@ -128,6 +128,5 @@ class UserStore {
         }
     }
 }
-
 
 export const userStore = new UserStore();

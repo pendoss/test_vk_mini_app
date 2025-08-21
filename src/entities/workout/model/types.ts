@@ -4,11 +4,11 @@ export interface WorkoutPlan {
   id: string;
   title: string;
   description: string;
-  date: string; // YYYY-MM-DD format
-  time: string; // HH:MM format
+  date: string;
+  time: string;
   location: string;
-  estimatedDuration: number; // in minutes
-  participants: User[]; // friend names or IDs
+  estimatedDuration: number;
+  participants: User[];
   afterWorkout: string;
   status: 'planned' | 'completed' | 'cancelled';
   createdAt: string;

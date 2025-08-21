@@ -1,20 +1,19 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/ui/card';
-import { Badge } from '@/shared/ui/ui/badge';
+import { Card, CardContent } from '@/shared/ui/ui/card';
 import { Button } from '@/shared/ui/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/ui/dialog';
 import { Input } from '@/shared/ui/ui/input';
 import { Label } from '@/shared/ui/ui/label';
 import { Textarea } from '@/shared/ui/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/shared/ui/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/ui/tabs';
-import { Calendar, MapPin, Clock, Users, Plus, ChevronDown, Trash2, CheckCircle, FileText, Edit } from 'lucide-react';
+import { Plus, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import {User, userStore} from "@/entities/user";
 import { workoutStore } from "@/entities/workout";
 import { WorkoutPlan } from "@/entities/workout/model/types.ts";
+import WorkoutCard from '@/shared/ui/WorkoutCard';
 
 const workoutTemplates = [
   {
@@ -103,12 +102,17 @@ const WorkoutPlannerPage = observer(({ currentUser }: { currentUser: User }) => 
       return;
     }
     try {
+      // Combine date and time into ISO string for PocketBase
+      const dateStr = newWorkout.date!;
+      const timeStr = newWorkout.time!;
+      // If time is in HH:MM format, combine with date
+      const isoDateTime = dateStr && timeStr ? new Date(`${dateStr}T${timeStr}:00.000Z`).toISOString() : dateStr;
       await workoutStore.createWorkout({
         id: "",
         title: newWorkout.title!,
         description: newWorkout.description || '',
-        date: newWorkout.date!,
-        time: newWorkout.time!,
+        date: isoDateTime, // send as ISO string
+        time: isoDateTime, // send as ISO string
         location: newWorkout.location!,
         estimatedDuration: newWorkout.estimatedDuration || 60,
         participants: newWorkout.participants || [],
@@ -244,7 +248,6 @@ const WorkoutPlannerPage = observer(({ currentUser }: { currentUser: User }) => 
   const signedUpWorkouts = workouts
     .filter(w => w.creator_id !== currentUser.id && w.participants.some(p => p.id === currentUser.id))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const participantsCount = newWorkout.participants?.length || 0;
 
   return (
     <div className="space-y-4">
@@ -453,156 +456,18 @@ const WorkoutPlannerPage = observer(({ currentUser }: { currentUser: User }) => 
       <div className="space-y-3">
         <h3 className="text-lg font-semibold mb-2">Мои тренировки</h3>
         {sortedWorkouts.map(workout => (
-          <Card key={workout.id} className="overflow-hidden">
-            <Collapsible>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start space-x-3 flex-1 min-w-0">
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(workout.id)}
-                        className="p-1 h-auto mt-0.5 flex-shrink-0"
-                      >
-                        <ChevronDown 
-                          className={`h-4 w-4 transition-transform ${
-                            expandedWorkouts.has(workout.id) ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </Button>
-                    </CollapsibleTrigger>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base leading-tight mb-1 break-words">{workout.title}</CardTitle>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="whitespace-nowrap">{new Date(workout.date).toLocaleDateString('ru-RU')}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3 flex-shrink-0" />
-                          <span className="whitespace-nowrap">{workout.time}</span>
-                        </div>
-
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    <Badge className={`${getStatusColor(workout.status)} text-xs whitespace-nowrap`}>
-                      {getStatusLabel(workout.status)}
-                    </Badge>
-                    <Badge>
-                      {participantsCount}
-                    </Badge>
-                    {workout.status === 'planned' && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => editWorkout(workout)}
-                        className="h-7 w-7 p-0 flex-shrink-0"
-                        title="Редактировать"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                      <div className="flex items-center space-x-1">
-                        <MapPin className="h-3 w-3" />
-                        <span>{workout.location}</span>
-                      </div>
-                      <span>~{workout.estimatedDuration} мин</span>
-                      {workout.participants.length > 0 && (
-                        <div className="flex items-center space-x-1">
-                          <Users className="h-3 w-3" />
-                          <span>{workout.participants.length} друг.</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Friends list */}
-                    {workout.participants.length > 0 && (
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-2">Участники:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {workout.participants.map(friendId => {
-                            const friend = workout.participants.find(f => f.id === friendId.id);
-                            if (!friend) return null;
-                            
-                            const statusColors = {
-                              online: 'bg-green-500',
-                              training: 'bg-blue-500',
-                              offline: 'bg-gray-400'
-                            };
-                            
-                            return (
-                              <div key={friendId.id} className="flex items-center space-x-2 bg-muted/50 rounded px-2 py-1">
-                                <div className="relative">
-                                  <div className="w-5 h-5 bg-muted rounded-full flex items-center justify-center">
-                                    <span className="text-xs">
-                                      {friend.name.split(' ').map(n => n[0]).join('')}
-                                    </span>
-                                  </div>
-                                  <div className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 ${statusColors[friend.status]} rounded-full border border-background`}></div>
-                                </div>
-                                <span className="text-xs">{friend.name}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {workout.description && (
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <div 
-                          className="prose prose-sm max-w-none text-sm"
-                          dangerouslySetInnerHTML={{ 
-                            __html: renderMarkdown(workout.description) 
-                          }}
-                        />
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <p className="text-xs text-muted-foreground">
-                        После: {workout.afterWorkout}
-                      </p>
-                      <div className="flex space-x-1">
-                        {workout.status === 'planned' && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => completeWorkout(workout)}
-                              className="h-7 text-xs"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Выполнено
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteWorkout(workout.id)}
-                          className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
+          <WorkoutCard
+            key={workout.id}
+            workout={workout}
+            expanded={expandedWorkouts.has(workout.id)}
+            onToggle={toggleExpanded}
+            onEdit={editWorkout}
+            onDelete={deleteWorkout}
+            onComplete={completeWorkout}
+            getStatusColor={getStatusColor}
+            getStatusLabel={getStatusLabel}
+            renderMarkdown={renderMarkdown}
+          />
         ))}
       </div>
 
@@ -611,68 +476,18 @@ const WorkoutPlannerPage = observer(({ currentUser }: { currentUser: User }) => 
         <div className="space-y-3 mt-8">
           <h3 className="text-lg font-semibold mb-2 text-orange-600">Тренировки, на которые я записался</h3>
           {signedUpWorkouts.map(workout => (
-            <Card key={workout.id} className="overflow-hidden">
-              {/* You can reuse the same rendering as for your workouts, or simplify as needed */}
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start space-x-3 flex-1 min-w-0">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base leading-tight mb-1 break-words">{workout.title}</CardTitle>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="h-3 w-3 flex-shrink-0" />
-                          <span className="whitespace-nowrap">{new Date(workout.date).toLocaleDateString('ru-RU')}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-3 w-3 flex-shrink-0" />
-                          <span className="whitespace-nowrap">{workout.time}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
-                    <Badge className={`${getStatusColor(workout.status)} text-xs whitespace-nowrap`}>
-                      {getStatusLabel(workout.status)}
-                    </Badge>
-                    <Badge>
-                      {workout.participants.length}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-3 w-3" />
-                      <span>{workout.location}</span>
-                    </div>
-                    <span>~{workout.estimatedDuration} мин</span>
-                    {workout.participants.length > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <Users className="h-3 w-3" />
-                        <span>{workout.participants.length} друг.</span>
-                      </div>
-                    )}
-                  </div>
-                  {workout.description && (
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <div
-                        className="prose prose-sm max-w-none text-sm"
-                        dangerouslySetInnerHTML={{
-                          __html: renderMarkdown(workout.description)
-                        }}
-                      />
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      После: {workout.afterWorkout}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <WorkoutCard
+                  key={workout.id}
+                  workout={workout}
+                  expanded={expandedWorkouts.has(workout.id)}
+                  onToggle={toggleExpanded}
+                  onEdit={editWorkout}
+                  onDelete={deleteWorkout}
+                  onComplete={completeWorkout}
+                  getStatusColor={getStatusColor}
+                  getStatusLabel={getStatusLabel}
+                  renderMarkdown={renderMarkdown}
+              />
           ))}
         </div>
       )}

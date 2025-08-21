@@ -3,13 +3,13 @@ import { Card, CardContent } from '@/shared/ui/ui/card';
 import { Badge } from '@/shared/ui/ui/badge';
 import { Progress } from '@/shared/ui/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/ui/dialog';
-import { CheckCircle, Clock, Star, Zap, Flame, Trophy} from 'lucide-react';
+import { CheckCircle, Star, Zap, Flame, Trophy} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Task } from '@/features/tasks';
-import * as LucideIcons from 'lucide-react';
-import {User} from "@/entities/user";
+import {User, userStore} from "@/entities/user";
 import {observer} from "mobx-react-lite";
 import {taskStore} from "@/features/tasks/model/store.ts";
+import {ScreenSpinner} from "@vkontakte/vkui";
 
 interface TasksPageProps {
     currentUser: User;
@@ -20,9 +20,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
 
 
 
-    function getLucideIconByName(name: string) {
-        return (LucideIcons)[name] || LucideIcons.Circle;
-    }
 
     useEffect(() => {
         taskStore.fetchTasks().catch((error) => console.log("Error fetching tasks",error));
@@ -64,7 +61,7 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">Баллы</p>
-                                <p className="text-lg font-semibold">{currentUser.points}</p>
+                                <p className="text-lg font-semibold">{currentUser.point}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -78,7 +75,7 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">Выполнено</p>
-                                <p className="text-lg font-semibold">{taskStore.completedTasks.length}</p>
+                                <p className="text-lg font-semibold">{userStore.user? userStore.user.workoutsCompleted + userStore.user.workoutsPlaned + userStore.user.workoutsWithFriends : 0}</p>
                             </div>
                         </div>
                     </CardContent>
@@ -91,78 +88,60 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                     <div className="space-y-2">
                         <div className="flex justify-between">
                             <p className="text-sm">Прогресс до {currentUser.level + 1} уровня</p>
-                            <p className="text-xs text-muted-foreground">{currentUser.points % 500}/500</p>
+                            <p className="text-xs text-muted-foreground">{currentUser.point % 500}/500</p>
                         </div>
-                        <Progress value={(currentUser.points % 500) / 5} className="h-2"/>
+                        <Progress value={(currentUser.point % 500) / 5} className="h-2"/>
                     </div>
                 </CardContent>
             </Card>
-            {/* Active Tasks Grid */}
             <div>
-                <h3 className="mb-3">Активные задания</h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {taskStore.userTasks.map(task => {
-                        const progressPercent = task.task && task.task.goal ? ((task.progress / task.task.goal) * 100) : (0);
-
-                        return (
-                            <motion.div
-                                key={task.id}
-                                layout
-                                initial={{opacity: 0, scale: 0.9}}
-                                animate={{opacity: 1, scale: 1}}
-                                exit={{opacity: 0, scale: 0.9}}
-                                whileTap={{scale: 0.95}}
-                                onClick={() => setSelectedTask(task.task)}
-                                className="cursor-pointer"
-                            >
-                                <Card className="hover:shadow-md transition-all duration-200 h-full">
-                                    <CardContent className="p-3">
-                                        <div className="space-y-3">
-                                            {/* Header */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex items-center space-x-2">
-                                                    <div className="flex items-center justify-center w-8 h-8 bg-primary/10 rounded-lg">
+                <h3 className="mb-3">Задания</h3>
+                {taskStore.tasks? (
+                    <div className="grid grid-cols-2 gap-3">
+                        {taskStore.tasks.map(task => {
+                            return (
+                                <motion.div
+                                    key={task.id}
+                                    layout
+                                    initial={{opacity: 0, scale: 0.9}}
+                                    animate={{opacity: 1, scale: 1}}
+                                    exit={{opacity: 0, scale: 0.9}}
+                                    whileTap={{scale: 0.95}}
+                                    onClick={() => setSelectedTask(task)}
+                                    className="cursor-pointer"
+                                >
+                                    <Card className="hover:shadow-md transition-all duration-200 h-full">
+                                        <CardContent className="p-3">
+                                            <div className="space-y-3">
+                                                {/* Header */}
+                                                <div className="flex items-start justify-between">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className={`${getDifficultyColor(task.difficulty)} text-white text-xs`}
+                                                        >
+                                                            {getDifficultyIcon(task.difficulty)}
+                                                        </Badge>
                                                     </div>
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className={`${getDifficultyColor(task.task.difficulty)} text-white text-xs`}
-                                                    >
-                                                        {getDifficultyIcon(task.task.difficulty)}
-                                                    </Badge>
+                                                    <Badge variant="outline" className="text-xs">+{task.points}</Badge>
                                                 </div>
-                                                <Badge variant="outline" className="text-xs">+{task.task.points}</Badge>
-                                            </div>
 
-                                            {/* Title */}
-                                            <div>
-                                                <h4 className="text-sm font-medium leading-tight mb-1">{task.task.title}</h4>
-                                                <p className="text-xs text-muted-foreground line-clamp-2">{task.task.description}</p>
-                                            </div>
-
-                                            {/* Progress */}
-                                            <div className="space-y-1">
-                                                <div className="flex justify-between text-xs">
-                                                    <span>{task.progress}/{task.task.goal}</span>
-                                                    <span className="text-muted-foreground">{Math.round(progressPercent)}%</span>
+                                                {/* Title */}
+                                                <div>
+                                                    <h4 className="text-sm font-medium leading-tight mb-1">{task.title}</h4>
+                                                    <p className="text-xs text-muted-foreground line-clamp-2">{task.description}</p>
                                                 </div>
-                                                <Progress value={progressPercent} className="h-1.5"/>
                                             </div>
+                                        </CardContent>
+                                    </Card>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <ScreenSpinner/>
+                )}
 
-                                            {/* Footer */}
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <div className="flex items-center space-x-1">
-                                                    <Clock className="h-3 w-3"/>
-                                                    <span>{task.task.endDate}</span>
-                                                </div>
-                                                <span>{task.task.category}</span>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </motion.div>
-                        );
-                    })}
-                </div>
             </div>
 
             {/* Completed Tasks */}
@@ -171,7 +150,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                     <h4 className="mb-3 text-sm text-muted-foreground">Выполненные задания</h4>
                     <div className="space-y-2">
                         {taskStore.completedTasks.map(task => {
-                            const Icon = getLucideIconByName(task.task.icon);
                             return (
                                 <Card key={task.id} className="opacity-75">
                                     <CardContent className="p-3">
@@ -180,7 +158,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                                                 <CheckCircle className="h-3 w-3 text-green-600"/>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <Icon className="h-4 w-4 text-muted-foreground"/>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium truncate">{task.task.title}</p>
                                                     <p className="text-xs text-muted-foreground">{task.task.category}</p>
@@ -203,12 +180,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                         <DialogContent className="max-w-[80vw] m-4 ml-1 max-h-[80vh] overflow-y-auto">
                             <DialogHeader>
                                 <div className="flex items-center space-x-3">
-                                    <div className="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-lg">
-                                        {(() => {
-                                            const Icon = getLucideIconByName(selectedTask.icon);
-                                            return <Icon className="h-5 w-5 text-primary"/>;
-                                        })()}
-                                    </div>
                                     <div>
                                         <DialogTitle className="text-left">{selectedTask.title}</DialogTitle>
                                         <div className="flex items-center space-x-2 mt-1">
@@ -216,10 +187,10 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                                                 variant="secondary"
                                                 className={`${getDifficultyColor(selectedTask.difficulty)} text-white text-xs`}
                                             >
-                        <span className="flex items-center space-x-1">
-                          {getDifficultyIcon(selectedTask.difficulty)}
-                            <span className="capitalize">{selectedTask.difficulty}</span>
-                        </span>
+                                            <span className="flex items-center space-x-1">
+                                              {getDifficultyIcon(selectedTask.difficulty)}
+                                                <span className="capitalize">{selectedTask.difficulty}</span>
+                                            </span>
                                             </Badge>
                                             <Badge variant="outline" className="text-xs">+{selectedTask.points} баллов</Badge>
                                         </div>
@@ -228,15 +199,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                             </DialogHeader>
 
                             <div className="space-y-4">
-                                {/* Progress */}
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span>Прогресс выполнения</span>
-                                        <span>{selectedTask.progress}/{selectedTask.goal}</span>
-                                    </div>
-                                    <Progress value={(selectedTask.progress / selectedTask.goal) * 100}/>
-                                </div>
-
                                 {/* Description */}
                                 <div className="space-y-2">
                                     <h4 className="font-medium">Описание задания</h4>
@@ -250,18 +212,6 @@ export const TasksPage = observer(({ currentUser }: TasksPageProps) => {
                                             }
                                             return line.trim() ? <p key={index} className="text-sm">{line}</p> : <br key={index}/>;
                                         })}
-                                    </div>
-                                </div>
-
-                                {/* Meta info */}
-                                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Категория</p>
-                                        <p className="text-sm font-medium">{selectedTask.category}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Времени осталось</p>
-                                        <p className="text-sm font-medium">{selectedTask.endDate}</p>
                                     </div>
                                 </div>
                             </div>

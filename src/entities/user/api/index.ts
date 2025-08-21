@@ -1,19 +1,8 @@
-import {apiClient, pb} from "@/shared/api";
+import { pb} from "@/shared/api";
 import {User} from "../model/types.ts"
 import {userStore} from "@/entities/user";
-
-
-
-
-
-// export interface UserProfile extends User {
-//     fullName: string;
-//     birthDate: string | null;
-//     weight: number;
-//     primaryGym: string;
-//     records: Record<string, number>; // "Жим лежа": 120
-//     upcomingWorkouts: WorkoutPlan[];
-// }
+import {ListResult, RecordModel} from "pocketbase";
+import {UserRecord} from "@/pages/onboarding/ui/Onboarding.tsx";
 
 export interface LeaderboardEntry {
     id: string;
@@ -21,7 +10,7 @@ export interface LeaderboardEntry {
     points: number;
     level: number;
     rank: number;
-    change: number; // -1, 0, 1 для изменения позиции
+    change: number;
     city: string;
     gym: string;
     todayPoints: number;
@@ -68,11 +57,11 @@ export interface WorkoutPlan {
     id: string;
     title: string;
     description: string;
-    date: string; // YYYY-MM-DD format
-    time: string; // HH:MM format
+    date: string;
+    time: string;
     location: string;
-    estimatedDuration: number; // in minutes
-    friends: string[]; // friend names or IDs
+    estimatedDuration: number;
+    friends: string[];
     afterWorkout: string;
     status: "planned" | "completed" | "cancelled";
     createdAt: string;
@@ -88,7 +77,6 @@ export interface UserActivity {
     totalWorkouts: number;
 }
 
-// Additional request types
 export interface CreateUserRequest {
     firstName: string;
     lastName: string;
@@ -127,13 +115,13 @@ export interface Task {
     difficulty: "легкий" | "средний" | "тяжелый" | "невозможный";
     points: number;
     timeRemaining: string;
-    progress: number; // 0-100
+    progress: number;
     maxProgress: number;
     completed: boolean;
     category: string;
     type: "automatic" | "manual";
     triggerAction?: string;
-    icon: string; // icon name
+    icon: string;
 }
 
 export interface HomeData {
@@ -144,13 +132,17 @@ export interface HomeData {
     todayWorkouts: WorkoutPlan[];
 }
 
+export interface UserRecordApi {
+    name: string;
+    value: number;
+}
+
 export interface Points{
     id: string;
     user: User;
     value: number;
 }
 
-// User API Service
 export class UserApiService {
     async createUser(user: User): Promise<User> {
         try {
@@ -159,17 +151,10 @@ export class UserApiService {
             return createdUser;
         } catch (error) {
             console.error("UserApiService.createUser error:", error);
-            // Throw a more descriptive error for the store/UI
             throw new Error( "Failed to create VK user");
         }
     }
 
-    // Получить данные для главной страницы
-    async getHomeData(): Promise<HomeData> {
-        const response = await apiClient.get<HomeData>("/user/home");
-        return response.data;
-    }
-    //TODO:это не так работать должно,таблица points для хранения изменений очков пользователя
     async getUserPoints(id: string): Promise<number> {
         return await pb.collection("points").getOne(id).then((value) =>  {return value.value});
     }
@@ -200,7 +185,61 @@ export class UserApiService {
 
         return user;
     }
+
+    async createRecord(userId: string, records: UserRecordApi[]): Promise<User> {
+        const createdIds: string[] = [];
+        for (const data of records) {
+            try {
+                const record = await pb.collection('records').create(data);
+                if (record && record.id) {
+                    createdIds.push(record.id as string);
+                }
+            } catch (err) {
+                console.error('Error creating record:', data, err);
+            }
+        }
+        if (createdIds.length !== records.length) {
+            throw new Error('Не все рекорды были успешно созданы');
+        }
+        return await pb.collection("vkUsers").update(userId, {records: createdIds}) as User;
+    }
+
+    async getLeaderboardUsers(params: LeaderboardParams = {}): Promise<ListResult<RecordModel>> {
+        const sort = '-point';
+        const page = params.offset ? Math.floor(params.offset / (params.limit || 30)) + 1 : 1;
+        const perPage = params.limit || 30;
+        return  await pb.collection('vkUsers').getList(page, perPage, { sort });
+    }
+
+    async getAllUsers(page: number, perPage: number): Promise<User[]> {
+        const result = await pb.collection("vkUsers").getList(page, perPage);
+        return result.items as unknown as User[];
+    }
+
+    async getUserRecords(recordIds: string[]): Promise<UserRecord[]> {
+        if (!recordIds || recordIds.length === 0) return [];
+        const records: UserRecord[] = [];
+        for (const id of recordIds) {
+            try {
+                const rec = await pb.collection('records').getOne(id);
+                if (rec && rec.id && rec.name && typeof rec.value === 'number') {
+                    records.push({ id: rec.id, name: rec.name, value: rec.value });
+                }
+            } catch (err) {
+                console.error('Error getting user record:', err);
+            }
+        }
+        return records;
+    }
+
+    async updateRecord(recordId: string, data: Partial<UserRecord>): Promise<UserRecord> {
+        const rec = await pb.collection('records').update(recordId, data);
+        return { id: rec.id, name: rec.name, value: rec.value };
+    }
+
+    async deleteRecord(recordId: string): Promise<void> {
+        await pb.collection('records').delete(recordId);
+    }
 }
 
-// Экспорт инстанса API
 export const userApi = new UserApiService();

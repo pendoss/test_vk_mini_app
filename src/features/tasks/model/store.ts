@@ -5,7 +5,7 @@ import {userStore} from "@/entities/user";
 
 
 class TaskStore {
-    tasks: UserTasks[] = [];
+    tasks: Task[] = [];
     userTasks: UserTasks[] = [];
     completedTasks: UserTasks[] = [];
 
@@ -33,7 +33,7 @@ class TaskStore {
 
     setTasks(tasks: Task[]) {
         runInAction(() => {
-            this.tasks = tasks.map(task => ({ id: task.id, vkUserId:"", task, progress: 0, completed: false }));
+            this.tasks = tasks;
         });
     }
     setUserTasks(tasks: UserTasks[]) {
@@ -46,24 +46,10 @@ class TaskStore {
     }
 
     async fetchTasks() {
-        const apiTasks = await taskApi.getUsersTasks();
-        const mappedTasks = apiTasks.map(item => ({
-            ...item,
-            task: item.expand?.task_id?.[0] || item.task
-        }));
+        const mappedTasks = await taskApi.getTasks();
         runInAction(() => {
             this.tasks = mappedTasks;
-            this.setUserTasks(mappedTasks);
-            this.completedTasks = mappedTasks.filter(value => value.completed);
-            this.completedTasks.forEach(item => {
-                if (item.task.goal <= item.progress) {
-                    userStore.updateUserScore()
-                        .catch((error) => {
-                            console.log(error);
-                        });
-                    this.markCompleted(item);
-                }
-            });
+            this.setTasks(mappedTasks);
         })
 
     }

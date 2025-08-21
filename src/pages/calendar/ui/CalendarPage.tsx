@@ -273,18 +273,18 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                 <div className={`w-3 h-3 rounded-full ${getTypeColor(workout.status)}`}></div>
                 <div className="flex-1">
                   <p className="font-medium">{workout.title}</p>
-                  <div className="flex items-center space-x-4 mt-1 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center space-x-2 mt-1 text-sm text-muted-foreground">
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-3 w-3" />
                       <span>{new Date(workout.date).toLocaleDateString('ru-RU')}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Clock className="h-3 w-3" />
-                      <span>{workout.estimatedDuration}</span>
+                      <span>{workout.time.slice(0, 5)}</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <MapPin className="h-3 w-3" />
-                      <span>{workout.location}</span>
+                      <span className="break-words max-w-[100px]">{workout.location}</span>
                     </div>
                     {workout.participants.length > 0 && (
                       <div className="flex items-center space-x-1">
@@ -340,7 +340,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <div className="flex items-center space-x-1">
                               <Clock className="h-4 w-4" />
-                              <span>{workout.time}</span>
+                              <span>{workout.time ? workout.time.slice(0, 5) : ''}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <MapPin className="h-4 w-4" />
@@ -374,7 +374,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                             <div className="flex items-center space-x-1">
                               <Clock className="h-4 w-4" />
-                              <span>{workout.time}</span>
+                              <span>{workout.time ? workout.time.slice(0, 5) : ''}</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <MapPin className="h-4 w-4" />
@@ -409,7 +409,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
 
       {/* Workout Detail Modal */}
       <Dialog open={!!selectedWorkout} onOpenChange={() => setSelectedWorkout(null)}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden p-0">
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-0">
           <DialogHeader className="flex-shrink-0 p-4 border-b">
             <DialogTitle className="text-lg font-semibold">
               {selectedWorkout?.title}
@@ -426,7 +426,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{selectedWorkout.time}</span>
+                    <span className="text-sm">{selectedWorkout?.time ? selectedWorkout.time.slice(0, 5) : ''}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -523,7 +523,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
               <DialogHeader>
                 <DialogTitle>Новая тренировка</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
                   <Label htmlFor="title">Название тренировки</Label>
                   <Input

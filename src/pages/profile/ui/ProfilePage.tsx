@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
+import { userApi } from '@/entities/user/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/ui/card';
 import { Badge } from '@/shared/ui/ui/badge';
-import { Button } from '@/shared/ui/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/ui/dialog';
-import { Input } from '@/shared/ui/ui/input';
-import { Label } from '@/shared/ui/ui/label';
-import { Textarea } from '@/shared/ui/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/ui/select';
-import { Calendar, MapPin, Trophy, Users, Plus } from 'lucide-react';
-import {User} from "@/entities/user";
+import { MapPin, Trophy } from 'lucide-react';
+import { UserRecord } from "@/pages/onboarding/ui/Onboarding.tsx";
+import { RecordEditModal } from '@/shared/ui/RecordEditModal';
+import { Button, Input } from '@/shared/ui';
+import { observer } from 'mobx-react-lite';
+import { userStore } from '@/entities/user';
 
 
 interface UserProfile {
@@ -20,25 +18,13 @@ interface UserProfile {
   city: string;
   primaryGym: string;
   records: Record<string, number>;
-  upcomingWorkouts: WorkoutPlan[];
 }
 
-interface WorkoutPlan {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  friends: string[];
-  afterWorkout: string;
-}
 
-interface ProfilePageProps {
-  currentUser: User;
-}
+export const ProfilePage = observer(() => {
+  const currentUser = userStore.user;
+  if (!currentUser) return <div>Загрузка профиля...</div>;
 
-export function ProfilePage({ currentUser }: ProfilePageProps) {
   // Функция для форматирования даты рождения из VK API
   const formatBirthDate = (bdate: string | null): string => {
     if (!bdate) return 'Не указана';
@@ -62,38 +48,101 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
     weight: currentUser.weight,
     city: currentUser.city || "не указан",
     primaryGym: currentUser.primaryGym || "не указан",
-    records: {
-      'Жим лежа': 120,
-      'Становая тяга': 180,
-      'Присед': 150,
-      'Подтягивания с весом': 25,
-      'Строгий подъем на бицепс': 45
-    },
-    upcomingWorkouts: [
-      {
-        id: '1',
-        title: 'День груди и трицепса',
-        description: 'Интенсивная тренировка верха тела',
-        date: '2025-01-20',
-        time: '18:00',
-        location: 'FitnessPark Сокольники',
-        friends: ['Михаил К.', 'Дмитрий С.'],
-        afterWorkout: 'Постою поболтаю с ребятами из зала'
-      },
-      {
-        id: '2',
-        title: 'Кардио и пресс',
-        description: 'Легкая восстановительная тренировка',
-        date: '2025-01-22',
-        time: '07:00',
-        location: 'FitnessPark Сокольники',
-        friends: [],
-        afterWorkout: 'Бегу домой'
-      }
-    ]
+    records: {}
   });
 
-  // Обновляем профиль при изменении данных пользователя
+  const [userRecords, setUserRecords] = useState<UserRecord[]>([]);
+  const [editingWeight, setEditingWeight] = useState(false);
+  const [editingGym, setEditingGym] = useState(false);
+  const [weightInput, setWeightInput] = useState(currentUser.weight);
+  const [gymInput, setGymInput] = useState(currentUser.primaryGym || "");
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [addingRecord, setAddingRecord] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const editingRecord = userRecords.find(r => r.id === editingRecordId);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    async function fetchUserRecords() {
+      if (!currentUser?.records || currentUser.records.length === 0) {
+        setUserRecords([]);
+        return;
+      }
+      const records = await userApi.getUserRecords(currentUser.records);
+      setUserRecords(records);
+    }
+    fetchUserRecords();
+  }, [currentUser]);
+
+  // Edit weight
+  const handleSaveWeight = async () => {
+    setLoading(true);
+    await userApi.updateUser(currentUser.id, { weight: Number(weightInput) });
+    // Fetch updated user and update MobX store
+    const updatedUser = await userApi.getUser(currentUser.id);
+    if (updatedUser) userStore.user = updatedUser;
+    setEditingWeight(false);
+    setLoading(false);
+  };
+
+  // Edit gym
+  const handleSaveGym = async () => {
+    setLoading(true);
+    await userApi.updateUser(currentUser.id, { primaryGym: gymInput });
+    // Fetch updated user and update MobX store
+    const updatedUser = await userApi.getUser(currentUser.id);
+    if (updatedUser) userStore.user = updatedUser;
+    setEditingGym(false);
+    setLoading(false);
+  };
+
+  // Edit record
+  const handleSaveRecord = async (data: { name: string; value: number }) => {
+    if (!editingRecordId) return;
+    setLoading(true);
+    await userApi.updateRecord(editingRecordId, data);
+    setEditingRecordId(null);
+    setLoading(false);
+    // Refetch records
+    const records = await userApi.getUserRecords(currentUser.records);
+    setUserRecords(records);
+  };
+  const handleCancelEditRecord = () => {
+    setEditingRecordId(null);
+  };
+
+  // Delete record
+  const handleDeleteRecord = async (recordId: string) => {
+    setLoading(true);
+    await userApi.deleteRecord(recordId);
+    // Get the current user's records array (fresh)
+    const currentRecords = Array.isArray(currentUser.records) ? currentUser.records : [];
+    // Remove the deleted record and filter out any invalid IDs
+    const updatedRecords = currentRecords.filter((id: string) => id !== recordId && id.length > 0);
+    // Fetch only valid record IDs from the database
+    const validRecordsObjs = updatedRecords.length > 0 ? await userApi.getUserRecords(updatedRecords) : [];
+    const validRecordIds = validRecordsObjs.map(r => r.id);
+    await userApi.updateUser(currentUser.id, { records: validRecordIds });
+    setLoading(false);
+    // Refetch records
+    setUserRecords(validRecordsObjs);
+  };
+
+  // Add record
+  const handleAddRecord = async (data: { name: string; value: number }) => {
+    setLoading(true);
+    const created = await userApi.createRecord(currentUser.id, [data]);
+    const newRecordIds = Array.isArray(created.records) ? created.records.filter(id => id.length > 0) : [];
+    const currentRecords = Array.isArray(currentUser.records) ? currentUser.records : [];
+    const validRecordsObjs = currentRecords.length > 0 ? await userApi.getUserRecords(currentRecords) : [];
+    const validPreviousIds = validRecordsObjs.map(r => r.id);
+    const updatedRecords = [...validPreviousIds, ...newRecordIds];
+    await userApi.updateUser(currentUser.id, { records: updatedRecords });
+    setAddingRecord(false);
+    setLoading(false);
+    const records = updatedRecords.length > 0 ? await userApi.getUserRecords(updatedRecords) : [];
+    setUserRecords(records);
+  };
   useEffect(() => {
     setProfile(prev => ({
       ...prev,
@@ -103,47 +152,6 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
     }));
   }, [currentUser]);
 
-  const [isCreatingWorkout, setIsCreatingWorkout] = useState(false);
-  const [newWorkout, setNewWorkout] = useState<Partial<WorkoutPlan>>({
-    title: '',
-    description: '',
-    date: '',
-    time: '',
-    location: '',
-    friends: [],
-    afterWorkout: 'Бегу домой'
-  });
-
-  const createWorkout = () => {
-    if (newWorkout.title && newWorkout.date && newWorkout.time) {
-      const workout: WorkoutPlan = {
-        id: Date.now().toString(),
-        title: newWorkout.title,
-        description: newWorkout.description || '',
-        date: newWorkout.date,
-        time: newWorkout.time,
-        location: newWorkout.location || 'FitnessPark Сокольники',
-        friends: newWorkout.friends || [],
-        afterWorkout: newWorkout.afterWorkout || 'Бегу домой'
-      };
-
-      setProfile({
-        ...profile,
-        upcomingWorkouts: [...profile.upcomingWorkouts, workout]
-      });
-
-      setNewWorkout({
-        title: '',
-        description: '',
-        date: '',
-        time: '',
-        location: '',
-        friends: [],
-        afterWorkout: 'Бегу домой'
-      });
-      setIsCreatingWorkout(false);
-    }
-  };
 
   return (
     <div className="space-y-4 p-4">
@@ -179,11 +187,42 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-muted-foreground">Вес</p>
-              <p>{profile.weight} кг</p>
+              {editingWeight ? (
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+                  <Input
+                    type="number"
+                    value={weightInput}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setWeightInput(Number(e.target.value))}
+                    className="w-20"
+                  />
+                  <Button size="sm" onClick={handleSaveWeight} disabled={loading} className="w-full sm:w-auto">Сохранить</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingWeight(false)} className="w-full sm:w-auto">Отмена</Button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+                  <span>{currentUser.weight} кг</span>
+                  <Button size="sm" variant="outline" onClick={() => setEditingWeight(true)} disabled={loading} className="w-full sm:w-auto">Редактировать</Button>
+                </div>
+              )}
             </div>
             <div>
               <p className="text-muted-foreground">Основной зал</p>
-              <p className="truncate">{profile.primaryGym}</p>
+              {editingGym ? (
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+                  <Input
+                    value={gymInput}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGymInput(e.target.value)}
+                    className="w-32"
+                  />
+                  <Button size="sm" onClick={handleSaveGym} disabled={loading} className="w-full sm:w-auto">Сохранить</Button>
+                  <Button size="sm" variant="outline" onClick={() => setEditingGym(false)} className="w-full sm:w-auto">Отмена</Button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full">
+                  <span className="truncate">{currentUser.primaryGym}</span>
+                  <Button size="sm" variant="outline" onClick={() => setEditingGym(true)} disabled={loading} className="w-full sm:w-auto">Редактировать</Button>
+                </div>
+              )}
             </div>
             <div>
               <p className="text-muted-foreground">Баллы</p>
@@ -192,189 +231,48 @@ export function ProfilePage({ currentUser }: ProfilePageProps) {
           </div>
         </CardContent>
       </Card>
-
-      <Tabs defaultValue="records" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="records">Рекорды</TabsTrigger>
-          <TabsTrigger value="workouts">Тренировки</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="records" className="space-y-3 mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Личные рекорды</CardTitle>
-              <CardDescription>Ваши лучшие результаты</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {Object.entries(profile.records).map(([exercise, weight]) => (
-                  <div key={exercise} className="flex items-center justify-between p-3 border rounded-lg">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Личные рекорды</CardTitle>
+            <CardDescription>Ваши лучшие результаты</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {userRecords.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Нет рекордов</p>
+              ) : (
+                userRecords.map((record) => (
+                  <div key={record.id} className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 border rounded-lg gap-2">
                     <div>
-                      <p className="text-sm font-medium">{exercise}</p>
+                      <p className="text-sm font-medium">{record.name}</p>
                       <p className="text-xs text-muted-foreground">Максимальный вес</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{weight} кг</p>
+                    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center w-full sm:w-auto text-right">
+                      <p className="font-semibold">{record.value} кг</p>
                       <Badge variant="secondary" className="text-xs">ПР</Badge>
+                      <Button size="sm" variant="outline" onClick={() => setEditingRecordId(record.id)} disabled={loading} className="w-full sm:w-auto">Редактировать</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteRecord(record.id)} disabled={loading} className="w-full sm:w-auto">Удалить</Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="workouts" className="space-y-3 mt-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Запланированные</h4>
-            <Dialog open={isCreatingWorkout} onOpenChange={setIsCreatingWorkout}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="h-3 w-3 mr-1" />
-                  Создать
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Новая тренировка</DialogTitle>
-                </DialogHeader>
-
-                <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="details">Основное</TabsTrigger>
-                    <TabsTrigger value="plan">План тренировки</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="details" className="space-y-4 mt-4">
-                    <div>
-                      <Label htmlFor="title">Название</Label>
-                      <Input
-                        id="title"
-                        value={newWorkout.title || ''}
-                        onChange={(e) => setNewWorkout({ ...newWorkout, title: e.target.value })}
-                        placeholder="Например: День ног"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="description">Описание</Label>
-                      <Textarea
-                        id="description"
-                        value={newWorkout.description || ''}
-                        onChange={(e) => setNewWorkout({ ...newWorkout, description: e.target.value })}
-                        placeholder="Краткое описание тренировки"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="date">Дата</Label>
-                        <Input
-                          id="date"
-                          type="date"
-                          value={newWorkout.date || ''}
-                          onChange={(e) => setNewWorkout({ ...newWorkout, date: e.target.value })}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="time">Время</Label>
-                        <Input
-                          id="time"
-                          type="time"
-                          value={newWorkout.time || ''}
-                          onChange={(e) => setNewWorkout({ ...newWorkout, time: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label htmlFor="location">Место</Label>
-                      <Input
-                        id="location"
-                        value={newWorkout.location || ''}
-                        onChange={(e) => setNewWorkout({ ...newWorkout, location: e.target.value })}
-                        placeholder="Название зала"
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="afterWorkout">После тренировки</Label>
-                      <Select
-                        value={newWorkout.afterWorkout}
-                        onValueChange={(value) => setNewWorkout({ ...newWorkout, afterWorkout: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Бегу домой">Бегу домой</SelectItem>
-                          <SelectItem value="Иду на работу">Иду на работу</SelectItem>
-                          <SelectItem value="Постою поболтаю с ребятами из зала">Постою поболтаю с ребятами из зала</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="plan" className="space-y-4 mt-4">
-                    <div>
-                      <Label>План тренировки</Label>
-                      <Textarea
-                        value={newWorkout.description || ''}
-                        onChange={(e) => setNewWorkout({ ...newWorkout, description: e.target.value })}
-                        placeholder="Опишите план тренировки: упражнения, подходы, повторения..."
-                        rows={8}
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button variant="outline" onClick={() => setIsCreatingWorkout(false)}>
-                    Отмена
-                  </Button>
-                  <Button onClick={createWorkout}>
-                    Создать
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <div className="space-y-3">
-            {profile.upcomingWorkouts.map(workout => (
-              <Card key={workout.id}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h5 className="text-sm font-medium">{workout.title}</h5>
-                      <p className="text-xs text-muted-foreground">{workout.description}</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {new Date(workout.date).toLocaleDateString('ru-RU')}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center space-x-3 text-xs text-muted-foreground">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-3 w-3" />
-                      <span>{workout.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>{workout.time}</span>
-                    </div>
-                    {workout.friends.length > 0 && (
-                      <div className="flex items-center space-x-1">
-                        <Users className="h-3 w-3" />
-                        <span>{workout.friends.length}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+                ))
+              )}
+              <Button size="sm" className="mt-2" onClick={() => setAddingRecord(true)} disabled={loading}>Добавить рекорд</Button>
+            </div>
+            <RecordEditModal
+              record={editingRecord}
+              isOpen={!!editingRecordId}
+              onSave={handleSaveRecord}
+              onCancel={handleCancelEditRecord}
+              loading={loading}
+            />
+            <RecordEditModal
+              isOpen={addingRecord}
+              onSave={handleAddRecord}
+              onCancel={() => setAddingRecord(false)}
+              loading={loading}
+            />
+          </CardContent>
+        </Card>
     </div>
   );
-}
+});

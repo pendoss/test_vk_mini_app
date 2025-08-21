@@ -17,7 +17,7 @@ export interface User {
   weight: number;
   primaryGym: string;
   records: string[];
-  points: number;
+  point: number;
 }
 
 // export interface UserPreferences {
