@@ -91,160 +91,117 @@ export function OnboardingModal({ isOpen, onClose }: OnboardingModalProps) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden p-0">
-                <div className="relative h-[700px] overflow-hidden">
-                    <div
-                        className={`absolute top-6 left-6 right-6 text-center z-10 transition-all duration-1500 ease-in-out ${
-                            showForm ? 'opacity-0 transform -translate-y-4' : 'opacity-100 transform translate-y-0'
-                        }`}
-                    >
-                        <h2 className="text-2xl">TrainSync</h2>
+            <DialogContent className="max-w-2xl max-h-[90vh] w-full flex flex-col p-0">
+                <div className="px-6 pt-6 pb-0">
+                    <h2 className="text-2xl text-center mb-6">TrainSync</h2>
+                </div>
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-64">
+                        <div className="text-center space-y-4">
+                            <h3>Загрузка профиля...</h3>
+                            <div className="animate-pulse space-y-2">
+                                <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
+                                <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
+                            </div>
+                        </div>
                     </div>
-                    {isLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center space-y-4">
-                                <h3>Загрузка профиля...</h3>
-                                <div className="animate-pulse space-y-2">
-                                    <div className="h-4 bg-muted rounded w-3/4 mx-auto"></div>
-                                    <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
-                                </div>
+                ) : (
+                    <>
+                        <div className={`transition-all duration-1000 ease-in-out ${userInfoVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'} text-center space-y-6 mb-6`}>
+                            <Avatar className="w-24 h-24 mx-auto">
+                                <AvatarImage src={userInfo.avatar} alt="User avatar" />
+                                <AvatarFallback>
+                                    {userInfo.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="space-y-2">
+                                <h3 className="text-xl">{userInfo.firstName} {userInfo.lastName}</h3>
+                                <p className="text-muted-foreground">Необходимо заполнить профиль</p>
                             </div>
                         </div>
-                    )}
-
-                    {!isLoading && (
-                        <div
-                            className={`absolute inset-0 flex items-center justify-center transition-all duration-1500 ease-in-out ${
-                                userInfoVisible ? 'opacity-100' : 'opacity-0'
-                            } ${
-                                showForm
-                                    ? 'transform -translate-y-48 scale-75'
-                                    : 'transform translate-y-0 scale-100'
-                            }`}
-                        >
-                            <div className="text-center space-y-6">
-                                <Avatar className="w-24 h-24 mx-auto">
-                                    <AvatarImage src={userInfo.avatar} alt="User avatar" />
-                                    <AvatarFallback>
-                                        {userInfo.name.split(' ').map(n => n[0]).join('')}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                <div className="space-y-2">
-                                    <h3 className="text-xl">{userInfo.firstName} {userInfo.lastName}</h3>
-                                    <p className="text-muted-foreground">
-                                        Необходимо заполнить профиль
-                                    </p>
+                        <div className={`flex-1 flex flex-col transition-all duration-1000 ease-in-out ${showForm ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}
+                            style={{ minHeight: 0 }}>
+                            <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ maxHeight: 'calc(90vh - 260px)' }}>
+                                <div className="space-y-4 mb-6">
+                                    <h4>Необходимая информация</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="gym">Основной зал</Label>
+                                            <Input
+                                                id="gym"
+                                                placeholder="Ваш зал"
+                                                value={primaryGym}
+                                                onChange={(e) => setPrimaryGym(e.target.value)}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="weight">Текущий вес в кг</Label>
+                                            <Input
+                                                id="weight"
+                                                type="number"
+                                                placeholder="Ваш вес в килограммах"
+                                                value={weight}
+                                                onChange={(e) => setWeight(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    )}
-                    {!isLoading && (
-                        <div
-                            className={`absolute inset-0 transition-all duration-1500 ease-in-out ${
-                                showForm
-                                    ? 'opacity-100 transform translate-y-0'
-                                    : 'opacity-0 transform translate-y-full pointer-events-none'
-                            }`}
-                        >
-                            <div className="h-full overflow-y-auto">
-                                <div className="h-64"></div>
-
-                                <div className="px-6 pb-6 space-y-6">
-                                    <div className="space-y-4">
-                                        <h4>Необходимая информация</h4>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <Label htmlFor="gym">Основной зал</Label>
-                                                <Input
-                                                    id="gym"
-                                                    placeholder="Ваш зал"
-                                                    value={primaryGym}
-                                                    onChange={(e) => setPrimaryGym(e.target.value)}
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label htmlFor="weight">Текущий вес в кг</Label>
-                                                <Input
-                                                    id="weight"
-                                                    type="number"
-                                                    placeholder="Ваш вес в килограммах"
-                                                    value={weight}
-                                                    onChange={(e) => setWeight(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <h4>Personal Records</h4>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={addRecord}
-                                            >
-                                                <Plus className="h-4 w-4 mr-2" />
-                                                Add Record
-                                            </Button>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {records.map((record, index) => (
-                                                <div key={record.id} className="flex gap-3 items-end">
-                                                    <div className="flex-1 space-y-2">
-                                                        <Label htmlFor={`exercise-${record.id}`}>
-                                                            Рекорд {index + 1}
-                                                        </Label>
-                                                        <Input
-                                                            id={`exercise-${record.id}`}
-                                                            placeholder="Например: жим, становая тяга и т.д."
-                                                            value={record.name}
-                                                            onChange={(e) => updateRecord(record.id, 'name', e.target.value)}
-                                                        />
-                                                    </div>
-
-                                                    <div className="flex-1 space-y-2">
-                                                        <Label htmlFor={`weight-${record.id}`}>
-                                                            Вес (кг)
-                                                        </Label>
-                                                        <Input
-                                                            id={`weight-${record.id}`}
-                                                            type="number"
-                                                            placeholder="Вес"
-                                                            value={record.value}
-                                                            onChange={(e) => updateRecord(record.id, 'value', e.target.value)}
-                                                        />
-                                                    </div>
-
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={() => removeRecord(record.id)}
-                                                        disabled={records.length === 1}
-                                                        className="mb-0"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="pt-4">
-                                        <Button
-                                            onClick={handleFinish}
-                                            className="w-full"
-                                            disabled={!canProceed()}
-                                        >
-                                            Продолжить
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex items-center justify-between">
+                                        <h4>Личные рекорды</h4>
+                                        <Button variant="outline" size="sm" onClick={addRecord}>
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Добавить
                                         </Button>
                                     </div>
+                                    <div className="space-y-3">
+                                        {records.map((record, index) => (
+                                            <div key={record.id} className="flex gap-3 items-end">
+                                                <div className="flex-1 space-y-2">
+                                                    <Label htmlFor={`exercise-${record.id}`}>Рекорд {index + 1}</Label>
+                                                    <Input
+                                                        id={`exercise-${record.id}`}
+                                                        placeholder="Например: жим, становая тяга и т.д."
+                                                        value={record.name}
+                                                        onChange={(e) => updateRecord(record.id, 'name', e.target.value)}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 space-y-2">
+                                                    <Label htmlFor={`weight-${record.id}`}>Вес (кг)</Label>
+                                                    <Input
+                                                        id={`weight-${record.id}`}
+                                                        type="number"
+                                                        placeholder="Вес"
+                                                        value={record.value}
+                                                        onChange={(e) => updateRecord(record.id, 'value', e.target.value)}
+                                                    />
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    onClick={() => removeRecord(record.id)}
+                                                    disabled={records.length === 1}
+                                                    className="mb-0"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
+                            <div className="w-full bg-white p-4 shadow-md z-20">
+                                <Button
+                                    onClick={handleFinish}
+                                    className="w-full"
+                                    disabled={!canProceed()}
+                                >
+                                    Продолжить
+                                </Button>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
             </DialogContent>
         </Dialog>
     );

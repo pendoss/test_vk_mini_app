@@ -175,6 +175,7 @@ const WorkoutPlannerPage = observer(({ currentUser }: { currentUser: User }) => 
     const saveEditedWorkout = async () => {
         if (!editingWorkout || !newWorkout.title || !newWorkout.date || !newWorkout.time) return;
         await workoutStore.updateWorkout(editingWorkout.id, {
+            ...editingWorkout,
             title: newWorkout.title!,
             description: newWorkout.description || '',
             date: newWorkout.date!,
@@ -183,10 +184,8 @@ const WorkoutPlannerPage = observer(({ currentUser }: { currentUser: User }) => 
             estimatedDuration: newWorkout.estimatedDuration || 60,
             participants: newWorkout.participants || [],
             afterWorkout: newWorkout.afterWorkout || 'Бегу домой',
-            id: newWorkout.id || "",
             status: 'planned',
             createdAt: newWorkout.createdAt || "",
-            creator_id: newWorkout.creator_id || "",
         });
         toast.success('Тренировка обновлена');
         setIsEditDialogOpen(false);

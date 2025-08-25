@@ -166,7 +166,6 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
       creator_id: currentUser.id,
       participants: [],
       status: 'planned',
-      id: Math.random().toString(36),
       time: newWorkout.time
     } as WorkoutPlan);
     setIsCreatingWorkout(false);
@@ -187,7 +186,7 @@ const CalendarPage = observer(({ currentUser }: CalendarPageProps) => {
     if (selectedDate) {
       setNewWorkout({
         ...newWorkout,
-        date: selectedDate.toISOString().slice(0, 10),
+        date: `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`,
       });
       setIsCreatingWorkout(true);
     }
